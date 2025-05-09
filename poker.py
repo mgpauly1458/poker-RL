@@ -49,7 +49,7 @@ class Player:
         self.stack -= amount
         self.current_bet += amount
 
-    def reset_for_new_hand(self):
+    def reset_player_for_new_hand(self):
         self.current_bet = 0
         self.status = PLAYER_STATUS_WAITING
         self.hand = []
@@ -206,7 +206,8 @@ class PokerGame:
             print(f"\n\n\n###########################################")
             print(f"Starting betting round for phase: {self.phase}")
             for player in self.players:
-                print(f"{player.name} - Stack: {player.stack}, Status: {player.status}, Hand: {player.hand}")
+                index_of_player = self.players.index(player)
+                print(f"{player.name} - Position: {self.map_position_to_position_name(index_of_player)} Stack: {player.stack}, Status: {player.status}, Hand: {player.hand}")
         
         """Run a betting round."""
         # iniitialize starting position. if phase is preflop, set the first player to act as the UTG player.
@@ -250,7 +251,6 @@ class PokerGame:
             self.table_position = self.calculate_next_position(self.table_position)
             print(f"Next player: {self.players[self.table_position].name}, Position: {self.map_position_to_position_name(self.table_position)}")
 
-
         print(f"End of betting round. Pot is now {self.pot}.")
         # reset non folded players' status to waiting
         self.reset_non_all_in_players_and_folded_players_status()
@@ -279,15 +279,32 @@ class PokerGame:
 
         return False
 
-    def reset_for_new_hand(self):
+    def reset_game_for_new_hand(self):
         """Reset the game state for a new round."""
         self.pot = 0
         self.current_bet = 0
         self.community_cards = []
         self.deck.shuffle()
         for player in self.players:
-            player.reset_for_new_hand()
+            player.reset_player_for_new_hand()
         self.phase = PHASE_PRE_FLOP  # Reset phase to pre-flop
+
+        #remove all players with a stack of 0 from the game
+        self.players = [p for p in self.players if p.stack > 0]
+
+        # ensure there are at least 2 players left in the game
+        if len(self.players) < 2:
+            return False
+
+        self.rotate_player_positions_on_table
+
+        # initialize the sb / bb
+        self.players[POSITION_SMALL_BLIND].place_bet(1)
+        self.players[POSITION_BIG_BLIND].place_bet(2)
+        self.pot += 3  # Add the blinds to the pot
+        self.current_bet = 2  # Set the current bet to the big blind amount
+
+        return True
 
     def determine_winner(self):
         rules = PokerRules()
@@ -303,8 +320,7 @@ class PokerGame:
             winner = active_players[0]
             print(f"{winner.name} wins the pot of {self.pot} as everyone else folded!")
             winner.stack += self.pot
-            self.reset_for_new_hand()
-            return
+            return self.reset_game_for_new_hand()
 
         for player in active_players:
             # get player's cards and all community cards in a list
@@ -320,7 +336,7 @@ class PokerGame:
         
         print(f"{player_and_current_best_hand['player']} wins with {player_and_current_best_hand['best_hand']}!")
         player_and_current_best_hand['player'].stack += self.pot
-        self.reset_for_new_hand()
+        return self.reset_game_for_new_hand()
 
     def add_community_card(self):
         """Add a card to the community cards."""
@@ -343,13 +359,14 @@ class PokerGame:
 
     def run_hand(self):
         """Run the game."""
+        # if returned false, end the game
         self.deal_hands()
         while self.phase != PHASE_SHOWDOWN:
             self.betting_round()
             if self.phase != PHASE_SHOWDOWN:
                 self.advance_phase()
-        self.determine_winner()
-        print("Game over!")
+        print("Hand is over.")
+        return self.determine_winner()
 
 class PokerGameStateSnapshot:
     def __init__(self,
@@ -367,4 +384,3 @@ class PokerGameStateSnapshot:
         self.community_cards = community_cards
         self.actions = actions
         self.current_player = current_player
-

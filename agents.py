@@ -3,11 +3,15 @@ import poker as pk
 
 class AllInAgent:
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
-        """Always goes all-in."""
+        """Goes all in on the turn, otherwise checks or calls."""
         current_player = game_state.current_player
         if game_state.phase == pk.PHASE_TURN:
             # Get current player's stack amount
             return pk.Action(current_player, type=pk.PLAYER_ACTION_ALL_IN, amount=current_player.stack)
+        elif game_state.current_bet > current_player.current_bet:
+            # If there's a bet, call it
+            amount_to_call = game_state.current_bet - current_player.current_bet
+            return pk.Action(current_player, type=pk.PLAYER_ACTION_CALL, amount=amount_to_call)
         return pk.Action(current_player, type=pk.PLAYER_ACTION_CHECK, amount=0)
 
 class CallCheckAgent:

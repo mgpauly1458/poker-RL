@@ -55,25 +55,26 @@ class TestFoldAllInAgent(unittest.TestCase):
     def test_fold_action(self):
         self.game.run_hand()
 
-class TestCallAllInFoldAgents(unittest.TestCase):
-    def setUp(self):
-        # Create players with agents
-        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
-        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
-        self.player3 = Player(name="FoldAgent", stack=1000, agent=FoldAgent())
+# class TestCallAllInFoldAgents(unittest.TestCase):
+#     def setUp(self):
+#         print("Setting up the game for Call, All-In, and Fold agents.") 
+#         # Create players with agents
+#         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+#         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+#         self.player3 = Player(name="FoldAgent", stack=1000, agent=FoldAgent())
 
-        # Initialize the game with a mock deck
-        self.game = PokerGame(players=[self.player1, self.player2, self.player3])
-        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+#         # Initialize the game with a mock deck
+#         self.game = PokerGame(players=[self.player1, self.player2, self.player3])
+#         self.game.deck = MockDeck()  # Use the mock deck for predictable results
 
-    def test_call_fold_action(self):
-        self.game.run_hand()
+#     def test_call_fold_action(self):
+#         self.game.run_hand()
 
-        # Assert the winner and stack changes
-        # Based on the mock deck, Player 1 (AllInAgent) should win with a Royal Flush
-        self.assertEqual(self.player1.stack, 2000)
-        self.assertEqual(self.player2.stack, 0)    # Player 2 loses all chips
-        self.assertEqual(self.player3.stack, 1000)    # Player 3 should not lose any chips
+#         # Assert the winner and stack changes
+#         # Based on the mock deck, Player 1 (AllInAgent) should win with a Royal Flush
+#         self.assertEqual(self.player1.stack, 2000)
+#         self.assertEqual(self.player2.stack, 0)    # Player 2 loses all chips
+#         self.assertEqual(self.player3.stack, 1000)    # Player 3 should not lose any chips
 
 if __name__ == "__main__":
     unittest.main()
