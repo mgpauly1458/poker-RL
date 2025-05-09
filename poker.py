@@ -167,9 +167,16 @@ class PokerGame:
 
         # take the current position index and get all the players that come after it in the list
         remaining_players = self.players[current_position + 1:]
+        if len(remaining_players) == 0:
+            current_position = -1  # reset to the beginning of the list
+            remaining_players = self.players
         
-        # handle edge case for pre flop
-        
+        print(f"Remaining players after {self.players[current_position].name}: {[player.name for player in remaining_players]}")
+        # get all remaining players who have not folded
+        remaining_players = [player for player in remaining_players if player.status != PLAYER_STATUS_FOLDED]
+        if self.phase == PHASE_PRE_FLOP and len(remaining_players) == 0:
+            # if there are no remaining players, return the first player in the list
+            return POSITION_SMALL_BLIND
 
         # find the first player who has not folded and return their position
         for player in remaining_players:
@@ -196,7 +203,7 @@ class PokerGame:
     def betting_round(self):
 
         if DEBUG:
-            print(f"\n\n###########################################")
+            print(f"\n\n\n###########################################")
             print(f"Starting betting round for phase: {self.phase}")
             for player in self.players:
                 print(f"{player.name} - Stack: {player.stack}, Status: {player.status}, Hand: {player.hand}")
@@ -211,7 +218,10 @@ class PokerGame:
         self.actions = []  # Reset actions for the current phase
 
         while True:
+
+            print("\n")
             current_player = self.players[self.table_position]
+            print(f"Current player: {current_player.name}, Position: {self.map_position_to_position_name(self.table_position)}")
             # Check if current player is all-in
             if current_player.status == PLAYER_STATUS_ALL_IN:
                 if self.betting_round_should_end():
@@ -219,9 +229,6 @@ class PokerGame:
                 # Skip the player if they are all-in
                 self.table_position = self.calculate_next_position(self.table_position)
                 continue
-
-            if DEBUG:
-                print(f"Current player: {current_player.name}, Position: {self.map_position_to_position_name(self.table_position)}")
 
             if current_player.status != PLAYER_STATUS_FOLDED:
                 game_state = PokerGameStateSnapshot(
@@ -237,9 +244,12 @@ class PokerGame:
                 self.process_action(current_player, action)
 
             if self.betting_round_should_end():
+                print(f"Betting round ended. Current player: {current_player.name}, Status: {current_player.status}")
                 break
 
             self.table_position = self.calculate_next_position(self.table_position)
+            print(f"Next player: {self.players[self.table_position].name}, Position: {self.map_position_to_position_name(self.table_position)}")
+
 
         print(f"End of betting round. Pot is now {self.pot}.")
         # reset non folded players' status to waiting
@@ -251,6 +261,11 @@ class PokerGame:
                 player.status = PLAYER_STATUS_WAITING
 
     def betting_round_should_end(self)-> bool:
+
+        # check if any player has a waiting status
+        waiting_player_statuses = [p.status for p in self.players if p.status == PLAYER_STATUS_WAITING]
+        if len(waiting_player_statuses) != 0:
+            return False
 
         # check if all players have checked or folded
         active_player_statuses = [p.status for p in self.players if p.status != PLAYER_STATUS_FOLDED]
@@ -325,6 +340,16 @@ class PokerGame:
             self.add_community_card()
         elif self.phase == PHASE_RIVER:
             self.phase = PHASE_SHOWDOWN
+
+    def run_hand(self):
+        """Run the game."""
+        self.deal_hands()
+        while self.phase != PHASE_SHOWDOWN:
+            self.betting_round()
+            if self.phase != PHASE_SHOWDOWN:
+                self.advance_phase()
+        self.determine_winner()
+        print("Game over!")
 
 class PokerGameStateSnapshot:
     def __init__(self,

@@ -272,7 +272,8 @@ class Straight(Hand):
         if len(ranks) != 5:
             raise PokerException("Invalid Straight")
         if ranks == list(range(ranks[0], ranks[0] + 5)):
-            self.highest_straight_card_rank = cards[-1].rank
+            highest_card = max(cards, key=lambda card: card.get_card_rank_value(card.rank))
+            self.highest_straight_card_rank = highest_card.rank
             return
         # check for the special case of A, 2, 3, 4, 5
         if ranks == [2, 3, 4, 5, 14]:

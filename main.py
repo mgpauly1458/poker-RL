@@ -1,17 +1,22 @@
 from poker import PokerGame, Player
 from agents import AllInAgent, CallCheckAgent
-from poker_util import Deck, Card
+import poker_util as pu
 
 # Mock Deck for predictable results
-class MockDeck(Deck):
+class MockDeck(pu.Deck):
     def __init__(self):
         self.cards = [
-            Card('A', 'Hearts'), Card('K', 'Hearts'),  # Player 1's hand
-            Card('Q', 'Spades'), Card('J', 'Spades'),  # Player 2's hand
-            Card('2', 'Diamonds'), Card('3', 'Diamonds'),  # Player 3's hand
-            Card('10', 'Diamonds'), Card('9', 'Diamonds'), Card('8', 'Diamonds'),  # Flop
-            Card('7', 'Clubs'),  # Turn
-            Card('6', 'Hearts')  # River
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_K, pu.SUIT_HEARTS), # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_SPADES), pu.Card(pu.CARD_RANK_NAME_J, pu.SUIT_SPADES), # Player 2's hand
+            pu.Card(pu.CARD_RANK_NAME_2, pu.SUIT_DIAMONDS), pu.Card(pu.CARD_RANK_NAME_3, pu.SUIT_DIAMONDS), # Player 3's hand
+
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_HEARTS),
+            pu.Card(pu.CARD_RANK_NAME_J, pu.SUIT_HEARTS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_HEARTS), # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_CLUBS), # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_6, pu.SUIT_HEARTS)  # River
         ]
 
     def draw(self):

@@ -22,3 +22,14 @@ class CallCheckAgent:
             else:
                 return pk.Action(current_player, type=pk.PLAYER_ACTION_CHECK, amount=0)
         return pk.Action(current_player, type=pk.PLAYER_ACTION_CHECK, amount=0)
+
+class FoldAgent:
+    def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        """Always folds."""
+        current_player = game_state.current_player
+
+        if game_state.current_bet > 0:
+            return pk.Action(current_player, type=pk.PLAYER_ACTION_FOLD, amount=0)
+        return pk.Action(current_player, type=pk.PLAYER_ACTION_CHECK, amount=0)
+    
+    
