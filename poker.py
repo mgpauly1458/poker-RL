@@ -73,7 +73,7 @@ class Action:
             print(f"Action taken: {self.player.name} {self.type} {self.amount}")
 
     def __repr__(self):
-        return f"Action(player={self.player.name}, type={self.action_type}, amount={self.amount})"
+        return f"Action(player={self.player.name}, type={self.type}, amount={self.amount})"
 
 class PokerGame:
     def __init__(self, players):
@@ -85,7 +85,7 @@ class PokerGame:
         self.deck = Deck()
         self.phase = PHASE_PRE_FLOP  # Current phase of the game
         self.actions = []  # List of actions for the current phase
-
+        self.hand_number = 0  # Track the number of hands played
         if len(players) < 2:
             raise ValueError("At least two players are required to start a game.")
         
@@ -201,7 +201,7 @@ class PokerGame:
         return position_names.get(position, "Unknown Position")
 
     def betting_round(self):
-
+        """Conduct a betting round."""
         if DEBUG:
             print(f"\n\n\n###########################################")
             print(f"Starting betting round for phase: {self.phase}")
@@ -284,7 +284,6 @@ class PokerGame:
         self.pot = 0
         self.current_bet = 0
         self.community_cards = []
-        self.deck.shuffle()
         for player in self.players:
             player.reset_player_for_new_hand()
         self.phase = PHASE_PRE_FLOP  # Reset phase to pre-flop
@@ -296,7 +295,10 @@ class PokerGame:
         if len(self.players) < 2:
             return False
 
-        self.rotate_player_positions_on_table
+        # things to do after first hand
+        if self.hand_number != 0:
+            self.rotate_player_positions_on_table
+            self.deck.shuffle()  # Shuffle the deck for the next hand
 
         # initialize the sb / bb
         self.players[POSITION_SMALL_BLIND].place_bet(1)
@@ -304,6 +306,7 @@ class PokerGame:
         self.pot += 3  # Add the blinds to the pot
         self.current_bet = 2  # Set the current bet to the big blind amount
 
+        self.hand_number += 1  # Increment the hand number
         return True
 
     def determine_winner(self):
@@ -358,8 +361,10 @@ class PokerGame:
             self.phase = PHASE_SHOWDOWN
 
     def run_hand(self):
-        """Run the game."""
-        # if returned false, end the game
+        """Run the game. Will return False if the game is over."""
+        if not self.reset_game_for_new_hand():
+            print("Game over! Not enough players to continue.")
+            return False
         self.deal_hands()
         while self.phase != PHASE_SHOWDOWN:
             self.betting_round()
@@ -384,3 +389,6 @@ class PokerGameStateSnapshot:
         self.community_cards = community_cards
         self.actions = actions
         self.current_player = current_player
+
+    def __str__(self):
+        return f"PokerGameStateSnapshot(pot={self.pot}, current_bet={self.current_bet}, phase={self.phase}, players={self.players}, community_cards={self.community_cards}, actions={self.actions}, current_player={self.current_player})"
