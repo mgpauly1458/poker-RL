@@ -216,8 +216,10 @@ class PokerGame:
             self.table_position = self.calculate_preflop_starting_position()
         else:
             self.table_position = self.calculate_non_preflop_starting_position()
+            self.current_bet = 0  # Reset current bet for the new betting round
         self.actions = []  # Reset actions for the current phase
 
+        
         while True:
 
             print("\n")
@@ -297,7 +299,7 @@ class PokerGame:
 
         # things to do after first hand
         if self.hand_number != 0:
-            self.rotate_player_positions_on_table
+            self.rotate_player_positions_on_table()
             self.deck.shuffle()  # Shuffle the deck for the next hand
 
         # initialize the sb / bb

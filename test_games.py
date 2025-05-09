@@ -71,11 +71,11 @@ class TestCallAllInFoldAgents(unittest.TestCase):
     def test_call_fold_action(self):
         self.game.run_hand()
 
-        # Assert the winner and stack changes
+        # Assert the winner and stack changes (after next bb / sb and rotation occurs)
         # Based on the mock deck, Player 1 (AllInAgent) should win with a Royal Flush
-        self.assertEqual(self.player1.stack, 2000)
+        self.assertEqual(self.player1.stack, 1998)
         self.assertEqual(self.player2.stack, 0)    # Player 2 loses all chips
-        self.assertEqual(self.player3.stack, 1000)    # Player 3 should not lose any chips
+        self.assertEqual(self.player3.stack, 999)    # Player 3 should not lose any chips
 
 if __name__ == "__main__":
     unittest.main()
