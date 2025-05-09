@@ -125,6 +125,21 @@ class Hand:
                 return SECOND_KICKER_WINS
         return KICKERS_TIE
 
+class WorstPokerHand(Hand):
+    def __init__(self):
+        super().__init__([
+            Card(CARD_RANK_NAME_2, SUIT_HEARTS),
+            Card(CARD_RANK_NAME_3, SUIT_DIAMONDS),
+            Card(CARD_RANK_NAME_4, SUIT_CLUBS),
+            Card(CARD_RANK_NAME_5, SUIT_SPADES),
+            Card(CARD_RANK_NAME_7, SUIT_HEARTS)
+        ])
+
+    def __gt__(self, other):
+        if isinstance(other, Hand):
+            return False
+        return NotImplemented
+
 class RoyalFlush(Hand):
     def __init__(self, cards: list[Card]):
         super().__init__(cards)

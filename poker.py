@@ -1,5 +1,5 @@
 from poker_util import (
-    Card, Deck, PokerRules
+    Card, Deck, PokerRules, WorstPokerHand
 )
 
 DEBUG = True
@@ -8,17 +8,17 @@ PHASE_PRE_FLOP = 'pre-flop'
 PHASE_FLOP = 'flop'
 PHASE_TURN = 'turn'
 PHASE_RIVER = 'river'
+PHASE_SHOWDOWN = 'showdown'
 
-POSITION_SMALL_BLIND = 'SB'
-POSITION_BIG_BLIND = 'BB'
-POSITION_UNDER_THE_GUN = 'UTG'
-POSITION_UNDER_THE_GUN_PLUS_ONE = 'UTG+1'
-POSITION_UNDER_THE_GUN_PLUS_TWO = 'UTG+2'
-POSITION_LOWJACK = 'LJ'
-POSITION_HIGHJACK = 'HJ'
-POSITION_MIDDLE_POSITION = 'MP'
-POSITION_CUT_OFF = 'CO'
-POSITION_BUTTON = 'BTN'
+POSITION_SMALL_BLIND = 0
+POSITION_BIG_BLIND = 1
+POSITION_UNDER_THE_GUN = 2
+POSITION_UNDER_THE_GUN_PLUS_ONE = 3
+POSITION_MIDDLE_POSITION = 4
+POSITION_LOWJACK = 5
+POSITION_HIGHJACK = 6
+POSITION_CUT_OFF = 7
+POSITION_BUTTON = 8
 
 PLAYER_STATUS_WAITING = 'waiting'
 PLAYER_STATUS_FOLDED = 'folded'
@@ -49,7 +49,7 @@ class Player:
         self.stack -= amount
         self.current_bet += amount
 
-    def reset_for_new_round(self):
+    def reset_for_new_hand(self):
         self.current_bet = 0
         self.status = PLAYER_STATUS_WAITING
         self.hand = []
@@ -60,11 +60,17 @@ class Player:
             return self.agent.act(game_state)
         raise NotImplementedError(f"{self.name} does not have an agent to decide actions.")
 
+    def __str__(self):
+        return f"Player(name={self.name}, stack={self.stack}, status={self.status}, hand={self.hand})"
+
 class Action:
     def __init__(self, player, type, amount=0):
         self.player = player
         self.type = type  # e.g., fold, check, call, raise, reraise, all_in
         self.amount = amount  # Amount of chips involved in the action
+
+        if DEBUG:
+            print(f"Action taken: {self.player.name} {self.type} {self.amount}")
 
     def __repr__(self):
         return f"Action(player={self.player.name}, type={self.action_type}, amount={self.amount})"
@@ -80,6 +86,9 @@ class PokerGame:
         self.phase = PHASE_PRE_FLOP  # Current phase of the game
         self.actions = []  # List of actions for the current phase
 
+        if len(players) < 2:
+            raise ValueError("At least two players are required to start a game.")
+        
     def deal_hands(self):
         """Deal two cards to each player."""
         for player in self.players:
@@ -89,21 +98,9 @@ class PokerGame:
         """Move to the next player's position."""
         self.table_position = (self.table_position + 1) % len(self.players)
 
-    def map_position_to_position_name(self, position_index):
-        """Map the position index to a position name."""
-        position_names = [
-            POSITION_UNDER_THE_GUN,
-            POSITION_UNDER_THE_GUN_PLUS_ONE,
-            POSITION_UNDER_THE_GUN_PLUS_TWO,
-            POSITION_LOWJACK,
-            POSITION_HIGHJACK,
-            POSITION_MIDDLE_POSITION,
-            POSITION_CUT_OFF,
-            POSITION_BUTTON,
-            POSITION_SMALL_BLIND,
-            POSITION_BIG_BLIND
-        ]
-        return position_names[position_index % len(position_names)]
+    def rotate_player_positions_on_table(self):
+        """Rotate player positions on the table."""
+        self.players = self.players[1:] + [self.players[0]]
 
     def process_action(self, player, action):
         """Process a player's action."""
@@ -119,7 +116,10 @@ class PokerGame:
             call_amount = self.current_bet - player.current_bet
             player.place_bet(call_amount)
             self.pot += call_amount
-            player.status = PLAYER_STATUS_CALLED
+            if player.stack == 0:
+                player.status = PLAYER_STATUS_ALL_IN
+            else:
+                player.status = PLAYER_STATUS_CALLED
             self.actions.append(action)
         elif action.type == PLAYER_ACTION_RAISE:
             raise_amount = action["amount"]
@@ -145,36 +145,85 @@ class PokerGame:
             all_in_amount = player.stack
             player.place_bet(all_in_amount)
             self.pot += all_in_amount
+            if self.current_bet < player.current_bet:
+                self.current_bet = player.current_bet
             player.status = PLAYER_STATUS_ALL_IN
             self.actions.append(action)
 
-    def betting_round(self):
-        """Run a betting round."""
-        print(f"Starting betting round for phase: {self.phase}")
+    def calculate_preflop_starting_position(self):
+        if len(self.players) == 2:
+            return POSITION_SMALL_BLIND
+        else:
+            return POSITION_UNDER_THE_GUN
+        
+    def calculate_non_preflop_starting_position(self):
+        # find first player in list who has not folded, return their position
+        for i in range(len(self.players)):
+            if self.players[i].status != PLAYER_STATUS_FOLDED:
+                return i
+        raise ValueError("No active players found.")
 
+    def calculate_next_position(self, current_position):
+
+        # take the current position index and get all the players that come after it in the list
+        remaining_players = self.players[current_position + 1:]
+        
+        # handle edge case for pre flop
+        
+
+        # find the first player who has not folded and return their position
+        for player in remaining_players:
+            if player.status != PLAYER_STATUS_FOLDED and player.status != PLAYER_STATUS_ALL_IN:
+                return self.players.index(player)
+        raise ValueError("No active players found after the current position.")
+
+
+    def map_position_to_position_name(self, position):
+        """Map position index to position name."""
+        position_names = {
+            POSITION_SMALL_BLIND: "Small Blind",
+            POSITION_BIG_BLIND: "Big Blind",
+            POSITION_UNDER_THE_GUN: "UTG",
+            POSITION_UNDER_THE_GUN_PLUS_ONE: "UTG+1",
+            POSITION_MIDDLE_POSITION: "MP",
+            POSITION_LOWJACK: "LJ",
+            POSITION_HIGHJACK: "HJ",
+            POSITION_CUT_OFF: "CO",
+            POSITION_BUTTON: "Button"
+        }
+        return position_names.get(position, "Unknown Position")
+
+    def betting_round(self):
+
+        if DEBUG:
+            print(f"\n\n###########################################")
+            print(f"Starting betting round for phase: {self.phase}")
+            for player in self.players:
+                print(f"{player.name} - Stack: {player.stack}, Status: {player.status}, Hand: {player.hand}")
+        
+        """Run a betting round."""
         # iniitialize starting position. if phase is preflop, set the first player to act as the UTG player.
         # if the phase is not fre flop, set the first player to act as the first player to come after the dealer.
-        if self.phase == "preflop":
-            self.table_position = 2
+        if self.phase == PHASE_PRE_FLOP:
+            self.table_position = self.calculate_preflop_starting_position()
         else:
-            self.table_position = 0
-
+            self.table_position = self.calculate_non_preflop_starting_position()
         self.actions = []  # Reset actions for the current phase
-        while True:
-            active_players = [p for p in self.players if p.status != "folded"]
-            if len(active_players) == 1:
-                # If only one player remains, they win the pot
-                winner = active_players[0]
-                print(f"{winner.name} wins the pot of {self.pot} as everyone else folded!")
-                winner.stack += self.pot
-                self.reset_for_new_round()
-                return
 
+        while True:
             current_player = self.players[self.table_position]
+            # Check if current player is all-in
+            if current_player.status == PLAYER_STATUS_ALL_IN:
+                if self.betting_round_should_end():
+                    break
+                # Skip the player if they are all-in
+                self.table_position = self.calculate_next_position(self.table_position)
+                continue
+
             if DEBUG:
                 print(f"Current player: {current_player.name}, Position: {self.map_position_to_position_name(self.table_position)}")
 
-            if current_player.status != "folded":
+            if current_player.status != PLAYER_STATUS_FOLDED:
                 game_state = PokerGameStateSnapshot(
                     pot=self.pot,
                     current_bet=self.current_bet,
@@ -187,38 +236,60 @@ class PokerGame:
                 action = current_player.take_action(game_state)
                 self.process_action(current_player, action)
 
-            self.rotate_position()
-
-            # End the betting round if all active players have matched the current bet
-            if all(p.status in ["folded", "checked", "called"] or p.current_bet == self.current_bet for p in self.players):
+            if self.betting_round_should_end():
                 break
 
-        print(f"End of betting round. Pot is now {self.pot}.")
+            self.table_position = self.calculate_next_position(self.table_position)
 
-        if self.phase == "showdown":
-            # If it's the showdown phase, determine the winner
-            self.determine_winner()
-            return
+        print(f"End of betting round. Pot is now {self.pot}.")
+        # reset non folded players' status to waiting
+        self.reset_non_all_in_players_and_folded_players_status()
+
+    def reset_non_all_in_players_and_folded_players_status(self):
+        for player in self.players:
+            if player.status != PLAYER_STATUS_ALL_IN and player.status != PLAYER_STATUS_FOLDED:
+                player.status = PLAYER_STATUS_WAITING
+
+    def betting_round_should_end(self)-> bool:
+
+        # check if all players have checked or folded
+        active_player_statuses = [p.status for p in self.players if p.status != PLAYER_STATUS_FOLDED]
+        if len(set(active_player_statuses)) == 1 and active_player_statuses[0] in [PLAYER_STATUS_CHECKED, PLAYER_STATUS_FOLDED]:
+            return True
         
-    def reset_for_new_round(self):
+        active_player_current_bets = [p.current_bet for p in self.players if p.status != PLAYER_STATUS_FOLDED]
+        # check if all players have the same current bet
+        if len(set(active_player_current_bets)) == 1:
+            return True
+
+        return False
+
+    def reset_for_new_hand(self):
         """Reset the game state for a new round."""
         self.pot = 0
         self.current_bet = 0
         self.community_cards = []
         self.deck.shuffle()
         for player in self.players:
-            player.reset_for_new_round()
-        self.phase = "preflop"
+            player.reset_for_new_hand()
+        self.phase = PHASE_PRE_FLOP  # Reset phase to pre-flop
 
     def determine_winner(self):
         rules = PokerRules()
         player_and_current_best_hand = {
-            player: None,
-            best_hand: None
+            'player': None,
+            'best_hand': WorstPokerHand()
         }
 
         # get all active players who have not folded
         active_players = [p for p in self.players if p.status != "folded"]
+        if len(active_players) == 1:
+            # If only one player remains, they win the pot
+            winner = active_players[0]
+            print(f"{winner.name} wins the pot of {self.pot} as everyone else folded!")
+            winner.stack += self.pot
+            self.reset_for_new_hand()
+            return
 
         for player in active_players:
             # get player's cards and all community cards in a list
@@ -228,13 +299,13 @@ class PokerGame:
             all_combinations = list(combinations(all_cards, 5))
             # get the best hand from all combinations
             best_hand = rules.get_best_hand(all_combinations)
-            if best_hand > player_and_current_best_hand[best_hand]:
-                player_and_current_best_hand[best_hand] = player
-                player_and_current_best_hand[player] = best_hand
+            if best_hand > player_and_current_best_hand['best_hand']:
+                player_and_current_best_hand['best_hand'] = best_hand
+                player_and_current_best_hand['player'] = player
         
-        print(f"{player_and_current_best_hand[player]} wins with {player_and_current_best_hand[best_hand]}!")
-        player_and_current_best_hand[player].stack += self.pot
-        self.reset_for_new_round()
+        print(f"{player_and_current_best_hand['player']} wins with {player_and_current_best_hand['best_hand']}!")
+        player_and_current_best_hand['player'].stack += self.pot
+        self.reset_for_new_hand()
 
     def add_community_card(self):
         """Add a card to the community cards."""
@@ -242,18 +313,18 @@ class PokerGame:
 
     def advance_phase(self):
         """Advance to the next phase of the game."""
-        if self.phase == "preflop":
-            self.phase = "flop"
+        if self.phase == PHASE_PRE_FLOP:
+            self.phase = PHASE_FLOP
             for _ in range(3):  # Deal the flop
                 self.add_community_card()
-        elif self.phase == "flop":
-            self.phase = "turn"
+        elif self.phase == PHASE_FLOP:
+            self.phase = PHASE_TURN
             self.add_community_card()
-        elif self.phase == "turn":
-            self.phase = "river"
+        elif self.phase == PHASE_TURN:
+            self.phase = PHASE_RIVER
             self.add_community_card()
-        elif self.phase == "river":
-            self.phase = "showdown"
+        elif self.phase == PHASE_RIVER:
+            self.phase = PHASE_SHOWDOWN
 
 class PokerGameStateSnapshot:
     def __init__(self,
