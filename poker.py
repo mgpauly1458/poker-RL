@@ -233,6 +233,8 @@ class PokerGame:
         else:
             self.table_position = self.calculate_non_preflop_starting_position()
             self.current_bet = 0  # Reset current bet for the new betting round
+            for player in self.players:
+                player.current_bet = 0  # Reset players' current bets for the new betting round
         self.actions = []  # Reset actions for the current phase
 
         

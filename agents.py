@@ -78,12 +78,16 @@ class DelayedAllinAgent(BaseAgent):
             return self.all_in(game_state)
 
 class DelayedRaiseAgent(BaseAgent):
-    def __init__(self, delay: int = 1):
+    def __init__(self, delay: int = 1, raise_amount: int = 100):
         self.delay = delay
         self.current_delay = 0
+        self.raise_amount = raise_amount
 
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         """Delays raising by a specified number of rounds."""
+
+        # if someone raises call. if the delay is not up and no one has raised check
+        # if the delay is up and no one has raised raise
         if self.current_delay < self.delay:
             self.current_delay += 1
             if self.someone_has_raised(game_state):
@@ -91,7 +95,10 @@ class DelayedRaiseAgent(BaseAgent):
             else:
                 return self.check(game_state)
         else:
-            return self.raise_bet(game_state, 100)
+            if self.someone_has_raised(game_state):
+                return self.call(game_state)
+            else:
+                return self.raise_bet(game_state, self.raise_amount)
         
 class ReRaiseAgent(BaseAgent):
     def __init__(self, re_raise_amount: int = 10):
@@ -100,15 +107,15 @@ class ReRaiseAgent(BaseAgent):
         self.did_check = False
 
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
-
         # reset for new round
+
         if game_state.phase != self.current_phase:
             self.current_phase = game_state.phase
             self.did_check = False
 
         if self.someone_has_raised(game_state):
             if self.did_check:
-                return self.raise_bet(game_state, self.raise_amount)
+                return self.raise_bet(game_state, self.re_raise_amount)
             else:
                 # will call if in position and someone raises
                 return self.call(game_state)

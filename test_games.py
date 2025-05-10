@@ -339,7 +339,7 @@ class TestDelayedRaiseAgent(unittest.TestCase):
     def setUp(self):
         print("\n\n\n\n\nSetting up the game for Raise Agent.") 
         # Create players with agents
-        self.player1 = Player(name="RaiseAgent", stack=1000, agent=DelayedRaiseAgent(delay=5))
+        self.player1 = Player(name="RaiseAgent", stack=1000, agent=DelayedRaiseAgent(delay=3))
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
 
         # Initialize the game with a mock deck
@@ -347,11 +347,29 @@ class TestDelayedRaiseAgent(unittest.TestCase):
         self.game.deck = MockDeck()  # Use the mock deck for predictable results
 
     def test_raise_action(self):
-        self.game.run_game()
+        self.game.run_hand()
         # Assert the winner and stack changes (after next bb / sb and rotation occurs)
         # Based on the mock deck, Player 1 (RaiseAgent) should win with a Royal Flush
-        self.assertEqual(self.player1.stack, 1101)
-        self.assertEqual(self.player2.stack, 899)    # this playerr ends up with royal flush because players
+        self.assertEqual(self.player1.stack, 1102)
+        self.assertEqual(self.player2.stack, 898)    # this playerr ends up with royal flush because players
+
+class TestReRaiseAgent(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for ReRaise Agent.") 
+        # Create players with agents
+        self.player1 = Player(name="ReRaiseAgent", stack=1000, agent=ReRaiseAgent(re_raise_amount=200))
+        self.player2 = Player(name="DelayedRaiseAgent", stack=1000, agent=DelayedRaiseAgent(delay=3))
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+
+    def test_reraise_action(self):
+        self.game.run_hand()
+        # Assert the winner and stack changes (after next bb / sb and rotation occurs)
+        # Based on the mock deck, Player 1 (ReRaiseAgent) should win with a Royal Flush
+        self.assertEqual(self.player1.stack, 1202)
+        self.assertEqual(self.player2.stack, 798)    # this playerr ends up with royal flush because players
 
 if __name__ == "__main__":
     unittest.main()
