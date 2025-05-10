@@ -1,6 +1,6 @@
 import unittest
 from poker import PokerGame, Player
-from agents import AllInAgent, CallCheckAgent, FoldAgent, DelayedAllinAgent
+from agents import AllInAgent, CallCheckAgent, FoldAgent, DelayedAllinAgent, ReRaiseAgent, DelayedRaiseAgent
 import poker_util as pu
 
 # Mock Deck for predictable results
@@ -334,6 +334,24 @@ class TestHigherHighCardWins(unittest.TestCase):
         self.game.run_hand()
         self.assertEqual(self.player1.stack, 0)
         self.assertEqual(self.player2.stack, 2000)
+
+class TestDelayedRaiseAgent(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Raise Agent.") 
+        # Create players with agents
+        self.player1 = Player(name="RaiseAgent", stack=1000, agent=DelayedRaiseAgent(delay=5))
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2], maximum_hands=2)
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+
+    def test_raise_action(self):
+        self.game.run_game()
+        # Assert the winner and stack changes (after next bb / sb and rotation occurs)
+        # Based on the mock deck, Player 1 (RaiseAgent) should win with a Royal Flush
+        self.assertEqual(self.player1.stack, 1101)
+        self.assertEqual(self.player2.stack, 899)    # this playerr ends up with royal flush because players
 
 if __name__ == "__main__":
     unittest.main()
