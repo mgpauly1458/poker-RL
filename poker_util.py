@@ -133,15 +133,17 @@ class Hand:
             raise PokerException("Hand must contain exactly 5 cards")
 
     def evaluate_kickers(self, kickers1, kickers2):
-        #convert kickers to their values using the get_card_rank_value method of the Card class
-        kickers1_values = [card.get_card_rank_value(card.rank) for card in kickers1]
-        kickers2_values = [card.get_card_rank_value(card.rank) for card in kickers2]
+        assert len(kickers1) == len(kickers2), "Kickers must be of the same length"
 
-        #compare the kickers
-        for k1, k2 in zip(kickers1_values, kickers2_values):
-            if k1 > k2:
+        #sorted cards by value
+        sorted1 = sorted(kickers1, key=lambda card: card.get_card_rank_value(card.rank), reverse=True)
+        sorted2 = sorted(kickers2, key=lambda card: card.get_card_rank_value(card.rank), reverse=True)
+        for i in range(len(sorted1)):
+            value1 = sorted1[i].get_card_rank_value(sorted1[i].rank)
+            value2 = sorted2[i].get_card_rank_value(sorted2[i].rank)
+            if value1 > value2:
                 return FIRST_KICKER_WINS
-            elif k1 < k2:
+            elif value1 < value2:   
                 return SECOND_KICKER_WINS
         return KICKERS_TIE
 
@@ -582,8 +584,9 @@ class HighCard(Hand):
                 return HAND_COMPARE_LT
             else:
                 return HAND_COMPARE_EQ
-        return HAND_COMPARE_GT
-    
+        if isinstance(other, WorstPokerHand):
+            return HAND_COMPARE_GT
+
     def __gt__(self, other):
         return self.compare(other) == HAND_COMPARE_GT
     
@@ -592,6 +595,9 @@ class HighCard(Hand):
     
     def __eq__(self, other):
         return self.compare(other) == HAND_COMPARE_EQ
+    
+    def __str__(self):
+        return f"Cards: {', '.join([str(card) for card in self.cards])}, High Card: {self.highest_card.rank}"
 
 class PokerRules:
     def __init__(self):

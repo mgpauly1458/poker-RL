@@ -354,12 +354,15 @@ class PokerGame:
             # get all possible 5 card combinations combinations from the player's hand and community cards
             from itertools import combinations
             all_combinations = list(combinations(all_cards, 5))
+
             # get the best hand from all combinations
             best_hand = rules.get_best_hand(all_combinations)
 
             # check if hand is equal to current best hand
-            if best_hand == player_and_current_best_hand['best_hand']:
-
+            if best_hand == player_and_current_best_hand['best_hand'] and player_and_current_best_hand['player'] != player:
+                print(f"\n\n{player.name} has a tied hand with {best_hand}!")
+                print(f"Best hand so far: {player_and_current_best_hand['best_hand']}")
+                print("player with best hand so far: ", player_and_current_best_hand['player'])
                 player_and_current_best_hand['tied_hands'].append(player)
 
             if best_hand > player_and_current_best_hand['best_hand']:

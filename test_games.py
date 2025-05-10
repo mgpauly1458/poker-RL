@@ -134,5 +134,206 @@ class TestAllInCallEqualHands(unittest.TestCase):
         self.assertEqual(self.player1.stack, 1000)
         self.assertEqual(self.player2.stack, 1000)
 
+# test for split pot when both have a pair and equal kickers
+class TestSplitPotEqualKickers(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers.") 
+        # Create players with agents
+        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+        self.game.deck.cards = [
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_2, pu.SUIT_HEARTS),  # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_CLUBS), pu.Card(pu.CARD_RANK_NAME_2, pu.SUIT_CLUBS),  # Player 2's hand
+
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_J, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_DIAMONDS),  # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_CLUBS),  # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_6, pu.SUIT_HEARTS)  # River
+        ]
+
+    def test_split_pot_equal_kickers(self):
+        self.game.run_hand()
+        self.assertEqual(self.player1.stack, 1000)
+        self.assertEqual(self.player2.stack, 1000)
+
+# test for split pot when both have a three of a kind and equal kickers
+class TestSplitPotEqualKickersThreeOfAKind(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers (Three of a Kind).") 
+        # Create players with agents
+        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+        self.game.deck.cards = [
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_2, pu.SUIT_HEARTS),  # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_CLUBS), pu.Card(pu.CARD_RANK_NAME_2, pu.SUIT_CLUBS),  # Player 2's hand
+
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_CLUBS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_DIAMONDS),  # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_CLUBS),  # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_6, pu.SUIT_HEARTS)  # River
+        ]
+
+    def test_split_pot_equal_kickers_three_of_a_kind(self):
+        self.game.run_hand()
+        self.assertEqual(self.player1.stack, 1000)
+        self.assertEqual(self.player2.stack, 1000)
+
+# test for split pot when both have a straight with the same high card
+class TestSplitPotEqualKickersStraight(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers (Straight).") 
+        # Create players with agents
+        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+        self.game.deck.cards = [
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_HEARTS),  # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_CLUBS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_CLUBS),  # Player 2's hand
+
+            pu.Card(pu.CARD_RANK_NAME_8, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_J, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_DIAMONDS),  # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_CLUBS),  # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_6, pu.SUIT_HEARTS)  # River
+        ]
+
+    def test_split_pot_equal_kickers_straight(self):
+        self.game.run_hand()
+        self.assertEqual(self.player1.stack, 1000)
+        self.assertEqual(self.player2.stack, 1000)
+
+# test for split pot when both have two pair with the same high card
+class TestSplitPotEqualKickersTwoPair(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers (Two Pair).") 
+        # Create players with agents
+        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+        self.game.deck.cards = [
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_HEARTS),  # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_CLUBS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_CLUBS),  # Player 2's hand
+
+            pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_DIAMONDS),  # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_CLUBS),  # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_6, pu.SUIT_HEARTS)  # River
+        ]
+
+    def test_split_pot_equal_kickers_two_pair(self):
+        self.game.run_hand()
+        self.assertEqual(self.player1.stack, 1000)
+        self.assertEqual(self.player2.stack, 1000)
+
+# test that higher flush wins the pot over lower flush
+class TestHigherFlushWins(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Higher Flush wins.") 
+        # Create players with agents
+        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+        self.game.deck.cards = [
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_CLUBS),  # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_CLUBS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_HEARTS),  # Player 2's hand
+
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_HEARTS),
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_HEARTS),  # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_HEARTS),  # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_6, pu.SUIT_HEARTS)  # River
+        ]
+
+    def test_higher_flush_wins(self):
+        self.game.run_hand()
+        self.assertEqual(self.player1.stack, 2000)
+        self.assertEqual(self.player2.stack, 0)
+
+class TestHigherPairWins(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Higher Pair wins.") 
+        # Create players with agents
+        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+        self.game.deck.cards = [
+            pu.Card(pu.CARD_RANK_NAME_K, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_CLUBS),  # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_CLUBS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_HEARTS),  # Player 2's hand
+
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_HEARTS),
+            pu.Card(pu.CARD_RANK_NAME_K, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_HEARTS),  # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_HEARTS),  # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_DIAMONDS)  # River
+        ]
+
+    def test_higher_pair_wins(self):
+        self.game.run_hand()
+        self.assertEqual(self.player1.stack, 2000)
+        self.assertEqual(self.player2.stack, 0)
+
+class TestHigherHighCardWins(unittest.TestCase):
+    def setUp(self):
+        print("\n\n\n\n\nSetting up the game for Higher High Card wins.") 
+        # Create players with agents
+        self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
+        self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
+
+        # Initialize the game with a mock deck
+        self.game = PokerGame(players=[self.player1, self.player2])
+        self.game.deck = MockDeck()  # Use the mock deck for predictable results
+        self.game.deck.cards = [
+            pu.Card(pu.CARD_RANK_NAME_10, pu.SUIT_HEARTS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_CLUBS),  # Player 1's hand
+            pu.Card(pu.CARD_RANK_NAME_J, pu.SUIT_CLUBS), pu.Card(pu.CARD_RANK_NAME_9, pu.SUIT_HEARTS),  # Player 2's hand
+
+            pu.Card(pu.CARD_RANK_NAME_A, pu.SUIT_HEARTS),
+            pu.Card(pu.CARD_RANK_NAME_K, pu.SUIT_DIAMONDS),
+            pu.Card(pu.CARD_RANK_NAME_Q, pu.SUIT_HEARTS),  # Flop
+
+            pu.Card(pu.CARD_RANK_NAME_7, pu.SUIT_HEARTS),  # Turn
+
+            pu.Card(pu.CARD_RANK_NAME_8, pu.SUIT_DIAMONDS)  # River
+        ]
+
+    def test_higher_high_card_wins(self):
+        self.game.run_hand()
+        self.assertEqual(self.player1.stack, 0)
+        self.assertEqual(self.player2.stack, 2000)
+
 if __name__ == "__main__":
     unittest.main()

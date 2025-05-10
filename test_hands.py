@@ -390,6 +390,5 @@ class TestPokerHands(unittest.TestCase):
         self.assertTrue(high_card6 > high_card5)
         self.assertFalse(high_card5 > high_card6)
 
-
 if __name__ == "__main__":
     unittest.main()
