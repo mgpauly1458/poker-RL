@@ -64,20 +64,26 @@ class Card:
     def __repr__(self):
         return f"Card({self.rank}, {self.suit})"
     
+    def compare(self, other):
+        if not isinstance(other, Card):
+            raise PokerException("Card cannot be compared to non-card object")
+        self_value = self.get_card_rank_value(self.rank)
+        other_value = self.get_card_rank_value(other.rank)
+        if self_value == other_value:
+            return HAND_COMPARE_EQ
+        elif self_value > other_value:
+            return HAND_COMPARE_GT
+        else:
+            return HAND_COMPARE_LT
+        
     def __eq__(self, other):
-        if isinstance(other, Card):
-            return self.rank == other.rank and self.suit == other.suit
-        return False
+        return self.compare(other) == HAND_COMPARE_EQ
     
     def __lt__(self, other):
-        if isinstance(other, Card):
-            return self.get_card_rank_value(self.rank) < self.get_card_rank_value(other.rank)
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_LT
     
     def __gt__(self, other):
-        if isinstance(other, Card):
-            return self.get_card_rank_value(self.rank) > self.get_card_rank_value(other.rank)
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
     
     def get_card_rank_value(self, rank):
         return {
@@ -170,7 +176,7 @@ class RoyalFlush(Hand):
         super().__init__(cards)
         try:
             straight_flush = StraightFlush(cards)
-            if straight_flush.highest_straight_flush_card_rank == CARD_RANK_NAME_A:
+            if straight_flush.highest_straight_flush_card.rank == CARD_RANK_NAME_A:
                 return
             else:
                 raise PokerException("Invalid Royal Flush")
@@ -199,7 +205,7 @@ class StraightFlush(Hand):
             if straight:
                 flush = Flush(cards)
                 if flush:
-                    self.highest_straight_flush_card_rank = straight.highest_straight_card_rank
+                    self.highest_straight_flush_card = straight.highest_straight_card
                     return
         except Exception as e:
             raise PokerException("Invalid Straight Flush") from e
@@ -334,11 +340,12 @@ class Straight(Hand):
             raise PokerException("Invalid Straight")
         if ranks == list(range(ranks[0], ranks[0] + 5)):
             highest_card = max(cards, key=lambda card: card.get_card_rank_value(card.rank))
-            self.highest_straight_card_rank = highest_card.rank
+            self.highest_straight_card = highest_card
             return
         # check for the special case of A, 2, 3, 4, 5
         if ranks == [2, 3, 4, 5, 14]:
-            self.highest_straight_card_rank = CARD_RANK_NAME_5
+            # get the 5 card and set the highest card to 5
+            self.highest_straight_card = cards.find(lambda card: card.get_card_rank_value(card.rank) == CARD_RANK_NAME_5)
             return
         raise PokerException("Invalid Straight")
     
@@ -356,10 +363,12 @@ class Straight(Hand):
         if isinstance(other, Flush):
             return HAND_COMPARE_LT
         if isinstance(other, Straight):
-            if self.highest_straight_card_rank > other.highest_straight_card_rank:
+            if self.highest_straight_card > other.highest_straight_card:
                 return HAND_COMPARE_GT
-            else:
+            elif other.highest_straight_card > self.highest_straight_card:
                 return HAND_COMPARE_LT
+            else:
+                return HAND_COMPARE_EQ
         return HAND_COMPARE_GT
     
     def __gt__(self, other):
@@ -370,6 +379,9 @@ class Straight(Hand):
     
     def __eq__(self, other):
         return self.compare(other) == HAND_COMPARE_EQ
+    
+    def __str__(self):
+        return f"Straight: {self.highest_straight_card.rank} high"
     
 
 

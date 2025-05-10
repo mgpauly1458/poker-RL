@@ -83,7 +83,7 @@ class Action:
         return f"Action(player={self.player.name}, type={self.type}, amount={self.amount})"
 
 class PokerGame:
-    def __init__(self, players):
+    def __init__(self, players, maximum_hands=3):
         self.players = players  # List of Player objects
         self.pot = 0
         self.current_bet = 0
@@ -93,6 +93,7 @@ class PokerGame:
         self.phase = PHASE_PRE_FLOP  # Current phase of the game
         self.actions = []  # List of actions for the current phase
         self.hand_number = 0  # Track the number of hands played
+        self.maximum_hands = maximum_hands  # Maximum number of hands to play
         if len(players) < 2:
             raise ValueError("At least two players are required to start a game.")
         
@@ -358,20 +359,24 @@ class PokerGame:
 
             # check if hand is equal to current best hand
             if best_hand == player_and_current_best_hand['best_hand']:
+
                 player_and_current_best_hand['tied_hands'].append(player)
 
             if best_hand > player_and_current_best_hand['best_hand']:
                 player_and_current_best_hand['best_hand'] = best_hand
                 player_and_current_best_hand['player'] = player
                 player_and_current_best_hand['tied_hands'] = [] # reset tied hands
-        
+
         # There is a tie
         if len(player_and_current_best_hand['tied_hands']) > 0:
             # If there are tied hands, split the pot among the winners
             print(f"It's a tie between {', '.join([p.name for p in player_and_current_best_hand['tied_hands']])} with {player_and_current_best_hand['best_hand']}!")
-            split_pot = self.pot // len(player_and_current_best_hand['tied_hands'])
+            split_pot = self.pot // (len(player_and_current_best_hand['tied_hands']) + 1)
             for player in player_and_current_best_hand['tied_hands']:
                 player.stack += split_pot
+            # Give the remaining pot to the player with the original best hand
+            player_and_current_best_hand['player'].stack += split_pot
+
             return GAME_SHOULD_CONTINUE
         
         # If there is a winner, give them the pot
@@ -400,6 +405,7 @@ class PokerGame:
 
     def run_hand(self):
         """Run the game. Will return False if the game is over."""
+        print("running the hand...")
         if not self.reset_game_for_new_hand():
             print("Game over! Not enough players to continue.")
             return False
@@ -416,7 +422,7 @@ class PokerGame:
         while True:
             print(f"\n\n\n###########################################")
             print(f"Starting hand number {self.hand_number}")
-            if self.hand_number > 3:
+            if self.hand_number > self.maximum_hands:
                 print("Max Hands Reached!")
                 break
             if self.run_hand() is not GAME_SHOULD_CONTINUE:
