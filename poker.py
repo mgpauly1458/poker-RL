@@ -35,6 +35,7 @@ PLAYER_ACTION_RERAISE = 'reraise'
 PLAYER_ACTION_ALL_IN = 'all_in'
 
 GAME_SHOULD_CONTINUE = 'continue'
+FIRST_HAND_NUMBER = 1
 
 class Player:
     def __init__(self, name, stack, agent=None):
@@ -92,7 +93,7 @@ class PokerGame:
         self.deck = Deck()
         self.phase = PHASE_PRE_FLOP  # Current phase of the game
         self.actions = []  # List of actions for the current phase
-        self.hand_number = 0  # Track the number of hands played
+        self.hand_number = FIRST_HAND_NUMBER  # Track the number of hands played
         self.maximum_hands = maximum_hands  # Maximum number of hands to play
         if len(players) < 2:
             raise ValueError("At least two players are required to start a game.")
@@ -318,7 +319,7 @@ class PokerGame:
             return False
 
         # things to do after first hand
-        if self.hand_number != 0:
+        if self.hand_number != FIRST_HAND_NUMBER:
             self.rotate_player_positions_on_table()
             self.deck.reset_cards()  # Shuffle the deck for the next hand
 

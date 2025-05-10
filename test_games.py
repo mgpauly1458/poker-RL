@@ -89,7 +89,7 @@ class TestCallDelayAllinFoldAgents(unittest.TestCase):
         self.player3 = Player(name="FoldAgent", stack=1000, agent=FoldAgent())
 
         # Initialize the game with a mock deck
-        self.game = PokerGame(players=[self.player1, self.player2, self.player3])
+        self.game = PokerGame(players=[self.player1, self.player2, self.player3], maximum_hands=4)
         self.game.deck = MockDeck()
         
     def test_call_fold_action(self):
@@ -343,7 +343,7 @@ class TestDelayedRaiseAgent(unittest.TestCase):
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
 
         # Initialize the game with a mock deck
-        self.game = PokerGame(players=[self.player1, self.player2], maximum_hands=2)
+        self.game = PokerGame(players=[self.player1, self.player2], maximum_hands=3)
         self.game.deck = MockDeck()  # Use the mock deck for predictable results
 
     def test_raise_action(self):
