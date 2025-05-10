@@ -45,11 +45,28 @@ class CallCheckAgent(BaseAgent):
         else:
             # If not, check
             return self.check(game_state)
-        
 
 class FoldAgent(BaseAgent):
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         """Always folds."""
-        if game_state.current_bet > 0:
+        current_player = game_state.current_player
+        if game_state.current_bet > current_player.current_bet:
             return self.fold(game_state)
         return self.check(game_state)
+
+class DelayedAllinAgent(BaseAgent):
+    def __init__(self, delay: int = 1):
+        self.delay = delay
+        self.current_delay = 0
+
+    def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        """Delays going all in by a specified number of rounds."""
+        current_player = game_state.current_player
+        if self.current_delay < self.delay:
+            self.current_delay += 1
+            if game_state.current_bet > current_player.current_bet:
+                return self.call(game_state)
+            else:
+                return self.check(game_state)
+        else:
+            return self.all_in(game_state)

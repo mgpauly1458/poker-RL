@@ -34,6 +34,8 @@ PLAYER_ACTION_RAISE = 'raise'
 PLAYER_ACTION_RERAISE = 'reraise'
 PLAYER_ACTION_ALL_IN = 'all_in'
 
+GAME_SHOULD_CONTINUE = 'continue'
+
 class Player:
     def __init__(self, name, stack, agent=None):
         self.name = name
@@ -45,9 +47,14 @@ class Player:
 
     def place_bet(self, amount):
         if amount > self.stack:
-            raise ValueError(f"{self.name} does not have enough chips to bet {amount}.")
+            actual_bet_amount = self.stack
+            self.stack = 0
+            self.current_bet += actual_bet_amount
+            self.status = PLAYER_STATUS_ALL_IN
+            return actual_bet_amount
         self.stack -= amount
         self.current_bet += amount
+        return amount
 
     def reset_player_for_new_hand(self):
         self.current_bet = 0
@@ -114,15 +121,16 @@ class PokerGame:
             self.actions.append(action)
         elif action.type == PLAYER_ACTION_CALL:
             call_amount = self.current_bet - player.current_bet
-            player.place_bet(call_amount)
-            self.pot += call_amount
-            if player.stack == 0:
-                player.status = PLAYER_STATUS_ALL_IN
-            else:
+            if call_amount == 0:
+                raise ValueError(f"{player.name} cannot call because they have already matched the current bet. Check instead")
+            actual_bet_amount = player.place_bet(call_amount)
+            print('actual_bet_amount: ', actual_bet_amount)
+            self.pot += actual_bet_amount
+            if player.status != PLAYER_STATUS_ALL_IN:
                 player.status = PLAYER_STATUS_CALLED
             self.actions.append(action)
         elif action.type == PLAYER_ACTION_RAISE:
-            raise_amount = action["amount"]
+            raise_amount = action.amount
             if raise_amount <= self.current_bet:
                 raise ValueError(f"Raise must be greater than the current bet of {self.current_bet}.")
             player.place_bet(raise_amount)
@@ -131,7 +139,7 @@ class PokerGame:
             player.status = PLAYER_STATUS_RAISED
             self.actions.append(action)
         elif action.type == PLAYER_ACTION_RERAISE:
-            reraise_amount = action["amount"]
+            reraise_amount = action.amount
             if reraise_amount <= self.current_bet:
                 raise ValueError(f"Reraise must be greater than the current bet of {self.current_bet}.")
             player.place_bet(reraise_amount)
@@ -178,12 +186,18 @@ class PokerGame:
             # if there are no remaining players, return the first player in the list
             return POSITION_SMALL_BLIND
 
-        # find the first player who has not folded and return their position
+        # find the first player in the list who has not folded and is not all in
         for player in remaining_players:
             if player.status != PLAYER_STATUS_FOLDED and player.status != PLAYER_STATUS_ALL_IN:
                 return self.players.index(player)
+            
+        # if everyone is all in or folded, return the next all in player
+        # this means everyone is either all in or folded, so we need to find the next all in player.
+        # the game will handle this scenario outside this function.
+        for player in remaining_players:
+            if player.status == PLAYER_STATUS_ALL_IN:
+                return self.players.index(player)
         raise ValueError("No active players found after the current position.")
-
 
     def map_position_to_position_name(self, position):
         """Map position index to position name."""
@@ -278,6 +292,11 @@ class PokerGame:
         # check if all players have the same current bet
         if len(set(active_player_current_bets)) == 1:
             return True
+        
+        # check if all players have folded or are all in
+        all_in_and_folded_statuses = [p.status for p in self.players if p.status in [PLAYER_STATUS_ALL_IN, PLAYER_STATUS_FOLDED]]
+        if len(all_in_and_folded_statuses) == len(self.players):
+            return True       
 
         return False
 
@@ -300,12 +319,12 @@ class PokerGame:
         # things to do after first hand
         if self.hand_number != 0:
             self.rotate_player_positions_on_table()
-            self.deck.shuffle()  # Shuffle the deck for the next hand
+            self.deck.reset_cards()  # Shuffle the deck for the next hand
 
         # initialize the sb / bb
         self.players[POSITION_SMALL_BLIND].place_bet(1)
         self.players[POSITION_BIG_BLIND].place_bet(2)
-        self.pot += 3  # Add the blinds to the pot
+        self.pot = 3  # Add the blinds to the pot
         self.current_bet = 2  # Set the current bet to the big blind amount
 
         self.hand_number += 1  # Increment the hand number
@@ -315,7 +334,8 @@ class PokerGame:
         rules = PokerRules()
         player_and_current_best_hand = {
             'player': None,
-            'best_hand': WorstPokerHand()
+            'best_hand': WorstPokerHand(),
+            'tied_hands': []
         }
 
         # get all active players who have not folded
@@ -325,7 +345,7 @@ class PokerGame:
             winner = active_players[0]
             print(f"{winner.name} wins the pot of {self.pot} as everyone else folded!")
             winner.stack += self.pot
-            return self.reset_game_for_new_hand()
+            return GAME_SHOULD_CONTINUE
 
         for player in active_players:
             # get player's cards and all community cards in a list
@@ -335,13 +355,29 @@ class PokerGame:
             all_combinations = list(combinations(all_cards, 5))
             # get the best hand from all combinations
             best_hand = rules.get_best_hand(all_combinations)
+
+            # check if hand is equal to current best hand
+            if best_hand == player_and_current_best_hand['best_hand']:
+                player_and_current_best_hand['tied_hands'].append(player)
+
             if best_hand > player_and_current_best_hand['best_hand']:
                 player_and_current_best_hand['best_hand'] = best_hand
                 player_and_current_best_hand['player'] = player
+                player_and_current_best_hand['tied_hands'] = [] # reset tied hands
         
+        # There is a tie
+        if len(player_and_current_best_hand['tied_hands']) > 0:
+            # If there are tied hands, split the pot among the winners
+            print(f"It's a tie between {', '.join([p.name for p in player_and_current_best_hand['tied_hands']])} with {player_and_current_best_hand['best_hand']}!")
+            split_pot = self.pot // len(player_and_current_best_hand['tied_hands'])
+            for player in player_and_current_best_hand['tied_hands']:
+                player.stack += split_pot
+            return GAME_SHOULD_CONTINUE
+        
+        # If there is a winner, give them the pot
         print(f"{player_and_current_best_hand['player']} wins with {player_and_current_best_hand['best_hand']}!")
         player_and_current_best_hand['player'].stack += self.pot
-        return self.reset_game_for_new_hand()
+        return GAME_SHOULD_CONTINUE
 
     def add_community_card(self):
         """Add a card to the community cards."""
@@ -374,6 +410,18 @@ class PokerGame:
                 self.advance_phase()
         print("Hand is over.")
         return self.determine_winner()
+
+    def run_game(self):
+        """Run the game until completion."""
+        while True:
+            print(f"\n\n\n###########################################")
+            print(f"Starting hand number {self.hand_number}")
+            if self.hand_number > 3:
+                print("Max Hands Reached!")
+                break
+            if self.run_hand() is not GAME_SHOULD_CONTINUE:
+                print("Someone won the game!")
+                break
 
 class PokerGameStateSnapshot:
     def __init__(self,

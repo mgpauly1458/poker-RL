@@ -46,6 +46,10 @@ FIRST_KICKER_WINS = 1
 SECOND_KICKER_WINS = -1
 KICKERS_TIE = 0
 
+HAND_COMPARE_GT = 1
+HAND_COMPARE_LT = -1
+HAND_COMPARE_EQ = 0
+
 class PokerException(Exception):
     pass
 
@@ -93,18 +97,28 @@ class Card:
         }.get(rank, 0)
 
 class Deck:
-    def __init__(self):
-        self.cards = [Card(rank, suit) for suit in [SUIT_HEARTS, SUIT_DIAMONDS, SUIT_CLUBS, SUIT_SPADES]
-                      for rank in [CARD_RANK_NAME_A, CARD_RANK_NAME_K, CARD_RANK_NAME_Q, CARD_RANK_NAME_J,]    
-                      ]
+    def __init__(self, no_shuffle=False):
+        self.fresh_deck_of_cards = [Card(rank, suit) for suit in [SUIT_HEARTS, SUIT_DIAMONDS, SUIT_CLUBS, SUIT_SPADES]
+                      for rank in [CARD_RANK_NAME_A, CARD_RANK_NAME_K, CARD_RANK_NAME_Q, CARD_RANK_NAME_J,
+                                   CARD_RANK_NAME_10, CARD_RANK_NAME_9, CARD_RANK_NAME_8, CARD_RANK_NAME_7,
+                                   CARD_RANK_NAME_6, CARD_RANK_NAME_5, CARD_RANK_NAME_4, CARD_RANK_NAME_3,
+                                   CARD_RANK_NAME_2]]
+        self.cards = self.fresh_deck_of_cards.copy()
+        self.no_shuffle = no_shuffle
         self.shuffle()
 
     def shuffle(self):
+        if self.no_shuffle:
+            return
         import random
         random.shuffle(self.cards)
 
     def draw(self):
-        return self.cards.pop() if self.cards else None
+        return self.cards.pop() if self.cards else PokerException("No cards left in the deck")
+    
+    def reset_cards(self):
+        self.cards = self.fresh_deck_of_cards.copy()
+        self.shuffle()
 
 class Hand:
     def __init__(self, cards):
@@ -135,10 +149,21 @@ class WorstPokerHand(Hand):
             Card(CARD_RANK_NAME_7, SUIT_HEARTS)
         ])
 
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, WorstPokerHand):
+            return HAND_COMPARE_EQ
+        return HAND_COMPARE_LT
+
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            return False
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+    
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
 
 class RoyalFlush(Hand):
     def __init__(self, cards: list[Card]):
@@ -152,10 +177,19 @@ class RoyalFlush(Hand):
         except Exception as e:
             raise PokerException("Invalid Royal Flush") from e
 
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        return HAND_COMPARE_GT
+    
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            return True
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ        
 
 class StraightFlush(Hand):
     def __init__(self, cards: list[Card]):
@@ -170,14 +204,23 @@ class StraightFlush(Hand):
         except Exception as e:
             raise PokerException("Invalid Straight Flush") from e
 
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return self.highest_straight_flush_card > other.highest_straight_flush_card
+        return HAND_COMPARE_GT
+
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return self.highest_straight_flush_card > other.highest_straight_flush_card
-            return True
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+    
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
 
 class FourOfAKind(Hand):
     def __init__(self, cards: list[Card]):
@@ -191,16 +234,16 @@ class FourOfAKind(Hand):
                 return
         raise PokerException("Invalid Four of a Kind")
 
-    def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return self.rank > other.rank
-            return True
-        return NotImplemented
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return self.rank > other.rank
+        return HAND_COMPARE_GT
     
 class FullHouse(Hand):
     def __init__(self, cards: list[Card]):
@@ -217,24 +260,33 @@ class FullHouse(Hand):
             return
         raise PokerException("Invalid Full House")
 
-    def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return False
-            if isinstance(other, FullHouse):
-                if self.three_of_a_kind_rank > other.three_of_a_kind_rank:
-                    return True
-                elif self.three_of_a_kind_rank == other.three_of_a_kind_rank:
-                    return self.pair_rank > other.pair_rank
-                else:
-                    return False
-            return True
-        return NotImplemented
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, FullHouse):
+            if self.three_of_a_kind_rank > other.three_of_a_kind_rank:
+                return HAND_COMPARE_GT
+            elif self.three_of_a_kind_rank == other.three_of_a_kind_rank:
+                return self.pair_rank > other.pair_rank
+            else:
+                return HAND_COMPARE_LT
+        return HAND_COMPARE_GT
     
+    def __gt__(self, other):
+        return self.compare(other) == HAND_COMPARE_GT
+    
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
+
 class Flush(Hand):
     def __init__(self, cards: list[Card]):
         super().__init__(cards)
@@ -244,26 +296,35 @@ class Flush(Hand):
         else:
             raise PokerException("Invalid Flush")
 
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, FullHouse):
+            return HAND_COMPARE_LT
+        if isinstance(other, Flush):
+            result = self.evaluate_kickers(self.cards, other.cards)
+            if result == FIRST_KICKER_WINS:
+                return HAND_COMPARE_GT
+            elif result == SECOND_KICKER_WINS:
+                return HAND_COMPARE_LT
+            else:
+                Exception("something went wrong")
+        return HAND_COMPARE_GT
+    
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return False
-            if isinstance(other, FullHouse):
-                return False
-            if isinstance(other, Flush):
-                result = self.evaluate_kickers(self.cards, other.cards)
-                if result == FIRST_KICKER_WINS:
-                    return True
-                elif result == SECOND_KICKER_WINS:
-                    return False
-                else:
-                    Exception("something went wrong")
-            return True
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+    
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
 
 class Straight(Hand):
     def __init__(self, cards: list[Card]):
@@ -281,26 +342,37 @@ class Straight(Hand):
             return
         raise PokerException("Invalid Straight")
     
-    def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return False
-            if isinstance(other, FullHouse):
-                return False
-            if isinstance(other, Flush):
-                return False
-            if isinstance(other, Straight):
-                if self.highest_straight_card_rank > other.highest_straight_card_rank:
-                    return True
-                else:
-                    return False
-            return True
-        return NotImplemented
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, FullHouse):
+            return HAND_COMPARE_LT
+        if isinstance(other, Flush):
+            return HAND_COMPARE_LT
+        if isinstance(other, Straight):
+            if self.highest_straight_card_rank > other.highest_straight_card_rank:
+                return HAND_COMPARE_GT
+            else:
+                return HAND_COMPARE_LT
+        return HAND_COMPARE_GT
     
+    def __gt__(self, other):
+        return self.compare(other) == HAND_COMPARE_GT
+
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
+    
+
+
 class ThreeOfAKind(Hand):
     def __init__(self, cards: list[Card]):
         super().__init__(cards)
@@ -312,34 +384,43 @@ class ThreeOfAKind(Hand):
                 return
         raise PokerException("Invalid Three of a Kind")
     
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, FullHouse):
+            return HAND_COMPARE_LT
+        if isinstance(other, Flush):
+            return HAND_COMPARE_LT
+        if isinstance(other, Straight):
+            return HAND_COMPARE_LT
+        if isinstance(other, ThreeOfAKind):
+            if self.rank < other.rank:
+                return HAND_COMPARE_LT
+            elif self.rank == other.rank:
+                result = self.evaluate_kickers(self.kickers, other.kickers)
+                if result == FIRST_KICKER_WINS:
+                    return HAND_COMPARE_GT
+                elif result == SECOND_KICKER_WINS:
+                    return HAND_COMPARE_LT
+                else:
+                    return HAND_COMPARE_EQ
+        return HAND_COMPARE_GT
+    
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return False
-            if isinstance(other, FullHouse):
-                return False
-            if isinstance(other, Flush):
-                return False
-            if isinstance(other, Straight):
-                return False
-            if isinstance(other, ThreeOfAKind):
-                if self.rank < other.rank:
-                    return False
-                elif self.rank == other.rank:
-                    result = self.evaluate_kickers(self.kickers, other.kickers)
-                    if result == FIRST_KICKER_WINS:
-                        return True
-                    elif result == SECOND_KICKER_WINS:
-                        return False
-                    else:
-                        # @Todo: need to implement kicker tie breaker
-                        raise Exception("Kickers tied")
-            return True
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
+    
 
 class TwoPair(Hand):
     def __init__(self, cards: list[Card]):
@@ -360,38 +441,47 @@ class TwoPair(Hand):
             return
         raise PokerException("Invalid Two Pair")
     
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, FullHouse):
+            return HAND_COMPARE_LT
+        if isinstance(other, Flush):
+            return HAND_COMPARE_LT
+        if isinstance(other, Straight):
+            return HAND_COMPARE_LT
+        if isinstance(other, ThreeOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, TwoPair):
+            if self.first_pair_rank > other.first_pair_rank:
+                return HAND_COMPARE_GT
+            elif self.first_pair_rank == other.first_pair_rank:
+                if self.second_pair_rank < other.second_pair_rank:
+                    return HAND_COMPARE_LT
+                elif self.second_pair_rank == other.second_pair_rank:
+                    result = self.evaluate_kickers([self.kicker], [other.kicker])
+                    if result == FIRST_KICKER_WINS:
+                        return HAND_COMPARE_GT
+                    elif result == SECOND_KICKER_WINS:
+                        return HAND_COMPARE_LT
+                    else:
+                        return HAND_COMPARE_EQ
+        return HAND_COMPARE_GT
+    
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return False
-            if isinstance(other, FullHouse):
-                return False
-            if isinstance(other, Flush):
-                return False
-            if isinstance(other, Straight):
-                return False
-            if isinstance(other, ThreeOfAKind):
-                return False
-            if isinstance(other, TwoPair):
-                if self.first_pair_rank > other.first_pair_rank:
-                    return True
-                elif self.first_pair_rank == other.first_pair_rank:
-                    if self.second_pair_rank < other.second_pair_rank:
-                        return False
-                    elif self.second_pair_rank == other.second_pair_rank:
-                        result = self.evaluate_kickers([self.kicker], [other.kicker])
-                        if result == FIRST_KICKER_WINS:
-                            return True
-                        elif result == SECOND_KICKER_WINS:
-                            return False
-                        else:
-                            raise Exception("Kickers tied")
-            return True
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+    
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
 
 class OnePair(Hand):
     def __init__(self, cards: list[Card]):
@@ -404,37 +494,46 @@ class OnePair(Hand):
                 return
         raise PokerException("Invalid One Pair")
 
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, FullHouse):
+            return HAND_COMPARE_LT
+        if isinstance(other, Flush):
+            return HAND_COMPARE_LT
+        if isinstance(other, Straight):
+            return HAND_COMPARE_LT
+        if isinstance(other, ThreeOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, TwoPair):
+            return HAND_COMPARE_LT
+        if isinstance(other, OnePair):
+            if self.rank < other.rank:
+                return HAND_COMPARE_LT
+            elif self.rank == other.rank:
+                result = self.evaluate_kickers(self.kickers, other.kickers)
+                if result == FIRST_KICKER_WINS:
+                    return HAND_COMPARE_GT
+                elif result == SECOND_KICKER_WINS:
+                    return HAND_COMPARE_LT
+                else:
+                    return HAND_COMPARE_EQ
+        return HAND_COMPARE_GT
+    
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return False
-            if isinstance(other, FullHouse):
-                return False
-            if isinstance(other, Flush):
-                return False
-            if isinstance(other, Straight):
-                return False
-            if isinstance(other, ThreeOfAKind):
-                return False
-            if isinstance(other, TwoPair):
-                return False
-            if isinstance(other, OnePair):
-                if self.rank < other.rank:
-                    return False
-                elif self.rank == other.rank:
-                    result = self.evaluate_kickers(self.kickers, other.kickers)
-                    if result == FIRST_KICKER_WINS:
-                        return True
-                    elif result == SECOND_KICKER_WINS:
-                        return False
-                    else:
-                        raise Exception("Kickers tied")
-            return True
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
 
 class HighCard(Hand):
     def __init__(self, cards: list[Card]):
@@ -442,36 +541,45 @@ class HighCard(Hand):
         #use the get_card_rank_value method to get the rank value of the cards
         self.highest_card = max(cards, key=lambda card: card.get_card_rank_value(card.rank))
 
+    def compare(self, other):
+        if not isinstance(other, Hand):
+            raise PokerException("Hand cannot be compared to non-hand object")
+        if isinstance(other, RoyalFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, StraightFlush):
+            return HAND_COMPARE_LT
+        if isinstance(other, FourOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, FullHouse):
+            return HAND_COMPARE_LT
+        if isinstance(other, Flush):
+            return HAND_COMPARE_LT
+        if isinstance(other, Straight):
+            return HAND_COMPARE_LT
+        if isinstance(other, ThreeOfAKind):
+            return HAND_COMPARE_LT
+        if isinstance(other, TwoPair):
+            return HAND_COMPARE_LT
+        if isinstance(other, OnePair):
+            return HAND_COMPARE_LT
+        if isinstance(other, HighCard):
+            result = self.evaluate_kickers(self.cards ,other.cards)
+            if result == FIRST_KICKER_WINS:
+                return HAND_COMPARE_GT
+            elif result == SECOND_KICKER_WINS:
+                return HAND_COMPARE_LT
+            else:
+                return HAND_COMPARE_EQ
+        return HAND_COMPARE_GT
+    
     def __gt__(self, other):
-        if isinstance(other, Hand):
-            if isinstance(other, RoyalFlush):
-                return False
-            if isinstance(other, StraightFlush):
-                return False
-            if isinstance(other, FourOfAKind):
-                return False
-            if isinstance(other, FullHouse):
-                return False
-            if isinstance(other, Flush):
-                return False
-            if isinstance(other, Straight):
-                return False
-            if isinstance(other, ThreeOfAKind):
-                return False
-            if isinstance(other, TwoPair):
-                return False
-            if isinstance(other, OnePair):
-                return False
-            if isinstance(other, HighCard):
-                result = self.evaluate_kickers(self.cards ,other.cards)
-                if result == FIRST_KICKER_WINS:
-                    return True
-                elif result == SECOND_KICKER_WINS:
-                    return False
-                else:
-                    raise Exception("Kickers tied")
-            return True
-        return NotImplemented
+        return self.compare(other) == HAND_COMPARE_GT
+    
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
 
 class PokerRules:
     def __init__(self):
