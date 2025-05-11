@@ -346,8 +346,8 @@ class Straight(Hand):
             return
         # check for the special case of A, 2, 3, 4, 5
         if ranks == [2, 3, 4, 5, 14]:
-            # get the 5 card and set the highest card to 5
-            self.highest_straight_card = cards.find(lambda card: card.get_card_rank_value(card.rank) == CARD_RANK_NAME_5)
+            # get the second highest card in the hand
+            self.highest_straight_card = max([card for card in cards if card.get_card_rank_value(card.rank) != 14], key=lambda card: card.get_card_rank_value(card.rank))
             return
         raise PokerException("Invalid Straight")
     
@@ -607,6 +607,7 @@ class PokerRules:
         """
         Given a list of hands, return the best hand.
         """
+        
         best_hand = None
         for hand in hands:
             # try to create a hand object
