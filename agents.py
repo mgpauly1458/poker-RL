@@ -228,7 +228,10 @@ class PairBetterAgent(SmartAgentBase):
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         """Checks if the player has at least a pair."""
         if self.i_have_at_least_a_pair(game_state):
-            return self.raise_bet(game_state, 100)  # Raise if the player has at least a pair
+            if not self.someone_has_raised(game_state):
+                return self.raise_bet(game_state, 100)
+            else:
+                return self.call(game_state)
         elif self.someone_has_raised(game_state):
             return self.call(game_state)
         else:
@@ -238,7 +241,10 @@ class FlushBetterAgent(SmartAgentBase):
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         """Checks if the player has at least a flush."""
         if self.i_have_at_least_a_flush(game_state):
-            return self.raise_bet(game_state, 100)  # Raise if the player has at least a flush
+            if not self.someone_has_raised(game_state):
+                return self.raise_bet(game_state, 100)
+            else:
+                return self.call(game_state)
         elif self.someone_has_raised(game_state):
             return self.call(game_state)
         else:

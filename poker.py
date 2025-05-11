@@ -126,7 +126,8 @@ class PokerGame:
             if call_amount == 0:
                 raise ValueError(f"{player.name} cannot call because they have already matched the current bet. Check instead")
             actual_bet_amount = player.place_bet(call_amount)
-            print('actual_bet_amount: ', actual_bet_amount)
+            if DEBUG:
+                print('actual_bet_amount: ', actual_bet_amount)
             self.pot += actual_bet_amount
             if player.status != PLAYER_STATUS_ALL_IN:
                 player.status = PLAYER_STATUS_CALLED
@@ -180,8 +181,8 @@ class PokerGame:
         if len(remaining_players) == 0:
             current_position = -1  # reset to the beginning of the list
             remaining_players = self.players
-        
-        print(f"Remaining players after {self.players[current_position].name}: {[player.name for player in remaining_players]}")
+        if DEBUG:
+            print(f"Remaining players after {self.players[current_position].name}: {[player.name for player in remaining_players]}")
         # get all remaining players who have not folded
         remaining_players = [player for player in remaining_players if player.status != PLAYER_STATUS_FOLDED]
         if self.phase == PHASE_PRE_FLOP and len(remaining_players) == 0:
@@ -265,13 +266,14 @@ class PokerGame:
                 self.process_action(current_player, action)
 
             if self.betting_round_should_end():
-                print(f"Betting round ended. Current player: {current_player.name}, Status: {current_player.status}")
                 break
 
             self.table_position = self.calculate_next_position(self.table_position)
-            print(f"Next player: {self.players[self.table_position].name}, Position: {self.map_position_to_position_name(self.table_position)}")
+            if DEBUG:
+                print(f"Next player: {self.players[self.table_position].name}, Position: {self.map_position_to_position_name(self.table_position)}")
 
-        print(f"End of betting round. Pot is now {self.pot}.")
+        if DEBUG:
+            print(f"End of betting round. Pot is now {self.pot}.")
         # reset non folded players' status to waiting
         self.reset_non_all_in_players_and_folded_players_status()
 
@@ -292,15 +294,22 @@ class PokerGame:
         if len(set(active_player_statuses)) == 1 and active_player_statuses[0] in [PLAYER_STATUS_CHECKED, PLAYER_STATUS_FOLDED]:
             return True
         
+        # check if one player is all in
+        all_in_player_statuses = [p.status for p in self.players if p.status == PLAYER_STATUS_ALL_IN]
+        if len(all_in_player_statuses) >= 1:
+            return True
+
         active_player_current_bets = [p.current_bet for p in self.players if p.status != PLAYER_STATUS_FOLDED]
         # check if all players have the same current bet
         if len(set(active_player_current_bets)) == 1:
             return True
         
-        # check if all players have folded or are all in
-        all_in_and_folded_statuses = [p.status for p in self.players if p.status in [PLAYER_STATUS_ALL_IN, PLAYER_STATUS_FOLDED]]
-        if len(all_in_and_folded_statuses) == len(self.players):
-            return True       
+        # # check if all players have folded, raise, or are all in
+        # # @Todo: this will work for two players, but will break if one goes all in, and two are left with money to raise and reraise eachother
+
+        # all_in_and_folded_statuses = [p.status for p in self.players if p.status in [PLAYER_STATUS_ALL_IN, PLAYER_STATUS_FOLDED, PLAYER_STATUS_RAISED]]
+        # if len(all_in_and_folded_statuses) == len(self.players):
+        #     return True       
 
         return False
 
@@ -347,7 +356,8 @@ class PokerGame:
         if len(active_players) == 1:
             # If only one player remains, they win the pot
             winner = active_players[0]
-            print(f"{winner.name} wins the pot of {self.pot} as everyone else folded!")
+            if DEBUG:
+                print(f"{winner.name} wins the pot of {self.pot} as everyone else folded!")
             winner.stack += self.pot
             return GAME_SHOULD_CONTINUE
 
@@ -363,9 +373,6 @@ class PokerGame:
 
             # check if hand is equal to current best hand
             if best_hand == player_and_current_best_hand['best_hand'] and player_and_current_best_hand['player'] != player:
-                print(f"\n\n{player.name} has a tied hand with {best_hand}!")
-                print(f"Best hand so far: {player_and_current_best_hand['best_hand']}")
-                print("player with best hand so far: ", player_and_current_best_hand['player'])
                 player_and_current_best_hand['tied_hands'].append(player)
 
             if best_hand > player_and_current_best_hand['best_hand']:
@@ -386,7 +393,8 @@ class PokerGame:
             return GAME_SHOULD_CONTINUE
         
         # If there is a winner, give them the pot
-        print(f"{player_and_current_best_hand['player']} wins with {player_and_current_best_hand['best_hand']}!")
+        if DEBUG:
+            print(f"{player_and_current_best_hand['player']} wins with {player_and_current_best_hand['best_hand']}!")
         player_and_current_best_hand['player'].stack += self.pot
         return GAME_SHOULD_CONTINUE
 

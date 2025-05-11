@@ -134,6 +134,5 @@ class TestFlushBetterDoesNotBetOnPair(unittest.TestCase):
         self.assertEqual(self.player1.stack, 998)  # FlushBetterAgent wins the pot
         self.assertEqual(self.player2.stack, 1002)    # CallCheckAgent loses all chips
 
-
 if __name__ == "__main__":
     unittest.main()

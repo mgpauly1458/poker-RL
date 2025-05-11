@@ -253,6 +253,15 @@ class FourOfAKind(Hand):
             return self.rank > other.rank
         return HAND_COMPARE_GT
     
+    def __gt__(self, other):
+        return self.compare(other) == HAND_COMPARE_GT
+    
+    def __lt__(self, other):
+        return self.compare(other) == HAND_COMPARE_LT
+    
+    def __eq__(self, other):
+        return self.compare(other) == HAND_COMPARE_EQ
+    
 class FullHouse(Hand):
     def __init__(self, cards: list[Card]):
         super().__init__(cards)
