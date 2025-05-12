@@ -1,4 +1,4 @@
-from poker import PokerGame, Player
+from poker_game import PokerGame, Player
 from agents import AllInAgent, CallCheckAgent
 import poker_util as pu
 

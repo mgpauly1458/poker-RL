@@ -1,5 +1,5 @@
 import unittest
-from poker import PokerGame, Player
+from poker_game import PokerGame, Player
 from agents import AllInAgent, CallCheckAgent, FoldAgent, DelayedAllinAgent, ReRaiseAgent, DelayedRaiseAgent
 import poker_util as pu
 
@@ -61,7 +61,6 @@ class TestFoldAllInAgent(unittest.TestCase):
 
 class TestCallAllInFoldAgents(unittest.TestCase):
     def setUp(self):
-        print("Setting up the game for Call, All-In, and Fold agents.") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -82,7 +81,6 @@ class TestCallAllInFoldAgents(unittest.TestCase):
 
 class TestCallDelayAllinFoldAgents(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Call, Delay All-In, and Fold agents.") 
         # Create players with agents
         self.player1 = Player(name="DelayedAllinAgent", stack=1000, agent=DelayedAllinAgent(delay=5))
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -108,7 +106,6 @@ class TestCallDelayAllinFoldAgents(unittest.TestCase):
 # test where one agent goes all in, another calls, and they both have the same hand
 class TestAllInCallEqualHands(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for All-In and Call agents with equal hands.") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -137,7 +134,6 @@ class TestAllInCallEqualHands(unittest.TestCase):
 # test for split pot when both have a pair and equal kickers
 class TestSplitPotEqualKickers(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers.") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -166,7 +162,6 @@ class TestSplitPotEqualKickers(unittest.TestCase):
 # test for split pot when both have a three of a kind and equal kickers
 class TestSplitPotEqualKickersThreeOfAKind(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers (Three of a Kind).") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -195,7 +190,6 @@ class TestSplitPotEqualKickersThreeOfAKind(unittest.TestCase):
 # test for split pot when both have a straight with the same high card
 class TestSplitPotEqualKickersStraight(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers (Straight).") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -224,7 +218,6 @@ class TestSplitPotEqualKickersStraight(unittest.TestCase):
 # test for split pot when both have two pair with the same high card
 class TestSplitPotEqualKickersTwoPair(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Split Pot with equal kickers (Two Pair).") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -253,7 +246,6 @@ class TestSplitPotEqualKickersTwoPair(unittest.TestCase):
 # test that higher flush wins the pot over lower flush
 class TestHigherFlushWins(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Higher Flush wins.") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -281,7 +273,6 @@ class TestHigherFlushWins(unittest.TestCase):
 
 class TestHigherPairWins(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Higher Pair wins.") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -309,7 +300,6 @@ class TestHigherPairWins(unittest.TestCase):
 
 class TestHigherHighCardWins(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Higher High Card wins.") 
         # Create players with agents
         self.player1 = Player(name="AllInAgent", stack=1000, agent=AllInAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -337,7 +327,6 @@ class TestHigherHighCardWins(unittest.TestCase):
 
 class TestDelayedRaiseAgent(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for Raise Agent.") 
         # Create players with agents
         self.player1 = Player(name="RaiseAgent", stack=1000, agent=DelayedRaiseAgent(delay=3))
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=CallCheckAgent())
@@ -355,7 +344,6 @@ class TestDelayedRaiseAgent(unittest.TestCase):
 
 class TestReRaiseAgent(unittest.TestCase):
     def setUp(self):
-        print("\n\n\n\n\nSetting up the game for ReRaise Agent.") 
         # Create players with agents
         self.player1 = Player(name="ReRaiseAgent", stack=1000, agent=ReRaiseAgent(re_raise_amount=200))
         self.player2 = Player(name="DelayedRaiseAgent", stack=1000, agent=DelayedRaiseAgent(delay=3))

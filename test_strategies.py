@@ -1,12 +1,11 @@
 import unittest
-import poker as pg
-from poker import PokerGame, Player
+import poker_game as pg
+from poker_game import PokerGame, Player
 import agents as ag
 import poker_util as pu
 
 class TestPairBetterVSFolder(unittest.TestCase):
     def setUp(self):
-        print("\nSetting up the game for PairBetterAgent vs FolderLong.")
         # Create players with agents
         self.player1 = Player(name="PairBetterAgent", stack=1000, agent=ag.PairBetterAgent())
         self.player2 = Player(name="FolderLong", stack=1000, agent=ag.FoldAgent())
@@ -21,7 +20,6 @@ class TestPairBetterVSFolder(unittest.TestCase):
 
 class TestPairBetterVSFlushBetter(unittest.TestCase):
     def setUp(self):
-        print("\nSetting up the game for PairBetterAgent vs TwoPairBetter.")
         # Create players with agents
         self.player1 = Player(name="PairBetterAgent", stack=1000, agent=ag.PairBetterAgent())
         self.player2 = Player(name="FlushBetter", stack=1000, agent=ag.FlushBetterAgent())

@@ -2,7 +2,7 @@ from poker_util import (
     Card, Deck, PokerRules, WorstPokerHand
 )
 
-DEBUG = True
+DEBUG = False
 
 PHASE_PRE_FLOP = 'pre-flop'
 PHASE_FLOP = 'flop'
@@ -35,6 +35,7 @@ PLAYER_ACTION_RERAISE = 'reraise'
 PLAYER_ACTION_ALL_IN = 'all_in'
 
 GAME_SHOULD_CONTINUE = 'continue'
+GAME_SHOULD_NOT_CONTINUE = False
 FIRST_HAND_NUMBER = 1
 
 class Player:
@@ -241,9 +242,10 @@ class PokerGame:
         
         while True:
 
-            print("\n")
             current_player = self.players[self.table_position]
-            print(f"Current player: {current_player.name}, Position: {self.map_position_to_position_name(self.table_position)}")
+            if DEBUG:
+                print("\n")
+                print(f"Current player: {current_player.name}, Position: {self.map_position_to_position_name(self.table_position)}")
             # Check if current player is all-in
             if current_player.status == PLAYER_STATUS_ALL_IN:
                 if self.betting_round_should_end():
@@ -352,14 +354,13 @@ class PokerGame:
         }
 
         # get all active players who have not folded
-        active_players = [p for p in self.players if p.status != "folded"]
+        active_players = [p for p in self.players if p.status != PLAYER_STATUS_FOLDED]
         if len(active_players) == 1:
             # If only one player remains, they win the pot
             winner = active_players[0]
             if DEBUG:
                 print(f"{winner.name} wins the pot of {self.pot} as everyone else folded!")
-            winner.stack += self.pot
-            return GAME_SHOULD_CONTINUE
+            return GAME_SHOULD_CONTINUE, [winner]
 
         for player in active_players:
             # get player's cards and all community cards in a list
@@ -383,20 +384,15 @@ class PokerGame:
         # There is a tie
         if len(player_and_current_best_hand['tied_hands']) > 0:
             # If there are tied hands, split the pot among the winners
-            print(f"It's a tie between {', '.join([p.name for p in player_and_current_best_hand['tied_hands']])} with {player_and_current_best_hand['best_hand']}!")
-            split_pot = self.pot // (len(player_and_current_best_hand['tied_hands']) + 1)
-            for player in player_and_current_best_hand['tied_hands']:
-                player.stack += split_pot
-            # Give the remaining pot to the player with the original best hand
-            player_and_current_best_hand['player'].stack += split_pot
-
-            return GAME_SHOULD_CONTINUE
+            if DEBUG:
+                print(f"It's a tie between {', '.join([p.name for p in player_and_current_best_hand['tied_hands']])} with {player_and_current_best_hand['best_hand']}!")
+            player_and_current_best_hand['tied_hands'].append(player_and_current_best_hand['player'])
+            return GAME_SHOULD_CONTINUE, player_and_current_best_hand['tied_hands']
         
         # If there is a winner, give them the pot
         if DEBUG:
             print(f"{player_and_current_best_hand['player']} wins with {player_and_current_best_hand['best_hand']}!")
-        player_and_current_best_hand['player'].stack += self.pot
-        return GAME_SHOULD_CONTINUE
+        return GAME_SHOULD_CONTINUE, [player_and_current_best_hand['player']]
 
     def add_community_card(self):
         """Add a card to the community cards."""
@@ -419,28 +415,61 @@ class PokerGame:
 
     def run_hand(self):
         """Run the game. Will return False if the game is over."""
-        print("running the hand...")
+        if DEBUG:
+            print("running the hand...")
         if not self.reset_game_for_new_hand():
-            print("Game over! Not enough players to continue.")
-            return False
+            if DEBUG:
+                print("Game over! Not enough players to continue.")
+            return GAME_SHOULD_NOT_CONTINUE
         self.deal_hands()
         while self.phase != PHASE_SHOWDOWN:
             self.betting_round()
             if self.phase != PHASE_SHOWDOWN:
                 self.advance_phase()
-        print("Hand is over.")
-        return self.determine_winner()
+        if DEBUG:
+            print("Hand is over.")
+        should_game_continue, winners = self.determine_winner()
+
+        # inform agents of who won
+        for player in self.players:
+            if player.agent:
+                player.agent.analyze_showdown(
+                    ShowdownState(
+                        players=self.players,
+                        community_cards=self.community_cards,
+                        winners=winners,
+                        pot=self.pot
+                    )
+                )
+
+        # assign winnings
+        if len(winners) == 0:
+            raise ValueError("No winners found.")
+
+        if len(winners) >= 1:
+            split_pot = self.pot // len(winners)
+            for winner in winners:
+                winner.stack += split_pot
+                if DEBUG:
+                    print(f"{winner.name} wins {split_pot} chips!")
+        else:
+            winner.stack += self.pot
+
+        return should_game_continue
 
     def run_game(self):
         """Run the game until completion."""
         while True:
-            print(f"\n\n\n###########################################")
-            print(f"Starting hand number {self.hand_number}")
+            if DEBUG:
+                print(f"\n\n\n###########################################")
+                print(f"Starting hand number {self.hand_number}")
             if self.hand_number > self.maximum_hands:
-                print("Max Hands Reached!")
+                if DEBUG:
+                    print("Max Hands Reached!")
                 break
             if self.run_hand() is not GAME_SHOULD_CONTINUE:
-                print("Someone won the game!")
+                if DEBUG:
+                    print("Someone won the game!")
                 break
 
 class PokerGameStateSnapshot:
@@ -462,3 +491,14 @@ class PokerGameStateSnapshot:
 
     def __str__(self):
         return f"PokerGameStateSnapshot(pot={self.pot}, current_bet={self.current_bet}, phase={self.phase}, players={self.players}, community_cards={self.community_cards}, actions={self.actions}, current_player={self.current_player})"
+
+class ShowdownState:
+    # must before cumulative bet is reset
+    def __init__(self, players, community_cards, winners, pot):
+        self.players = players
+        self.community_cards = community_cards
+        self.winners = winners
+        self.pot = pot
+
+    def __str__(self):
+        return f"ShowdownState(players={self.players}, community_cards={self.community_cards}, winner={self.winner}, pot={self.pot})"

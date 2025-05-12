@@ -1,5 +1,5 @@
 import unittest
-from poker import PokerGame, Player
+from poker_game import PokerGame, Player
 import agents as ag
 import poker_util as pu
 
@@ -24,7 +24,6 @@ class MockDeck(pu.Deck):
 
 class TestPairBetterAgent(unittest.TestCase):
     def setUp(self):
-        print("\nSetting up the game for PairBetterAgent vs CallCheckAgent.")
         # Create players with agents
         self.player1 = Player(name="PairBetterAgent", stack=1000, agent=ag.PairBetterAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=ag.CallCheckAgent())
@@ -42,7 +41,6 @@ class TestPairBetterAgent(unittest.TestCase):
 
 class TestFlushBetterAgent(unittest.TestCase):
     def setUp(self):
-        print("\nSetting up the game for FlushBetterAgent vs CallCheckAgent.")
         # Create players with agents
         self.player1 = Player(name="FlushBetterAgent", stack=1000, agent=ag.FlushBetterAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=ag.CallCheckAgent())
@@ -74,7 +72,6 @@ class TestFlushBetterAgent(unittest.TestCase):
 
 class TestPairBetterBetsOnFlush(unittest.TestCase):
     def setUp(self):
-        print("\nSetting up the game for PairBetterAgent vs CallCheckAgent with a flush.")
         # Create players with agents
         self.player1 = Player(name="PairBetterAgent", stack=1000, agent=ag.PairBetterAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=ag.CallCheckAgent())
@@ -105,7 +102,6 @@ class TestPairBetterBetsOnFlush(unittest.TestCase):
 
 class TestFlushBetterDoesNotBetOnPair(unittest.TestCase):
     def setUp(self):
-        print("\nSetting up the game for FlushBetterAgent vs CallCheckAgent with a pair.")
         # Create players with agents
         self.player1 = Player(name="FlushBetterAgent", stack=1000, agent=ag.FlushBetterAgent())
         self.player2 = Player(name="CallCheckAgent", stack=1000, agent=ag.CallCheckAgent())

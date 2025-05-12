@@ -1,9 +1,36 @@
 import random
-import poker as pk
+import poker_game as pk
 import poker_util as pu
 import numpy as np
 
 class BaseAgent:
+
+    def __init__(self):
+        self.player_name = None # allows agents to dynamically set their name when current player is set. so they can query if they won at the end of the hand or not.
+
+    def analyze_amount_won(self, showdown_state: pk.ShowdownState) -> None:
+        # check if player is in winners list
+
+        for player in showdown_state.winners: 
+            if player.name == self.player_name:
+                # check if split pot scenario
+                print("\nplayer is in winners list: ", player.name)
+                if len(showdown_state.winners) > 1:
+                    split_pot = showdown_state.pot // len(showdown_state.winners)
+                    if pk.DEBUG:
+                        print(f"{self.player_name} won {split_pot} chips in a split pot.")
+                    return split_pot
+                else:
+                    if pk.DEBUG:
+                        print(f"{self.player_name} won {showdown_state.pot} chips.")
+                    return showdown_state.pot
+        if pk.DEBUG:
+            print(f"{self.player_name} lost the hand.")
+        return 0
+
+    def analyze_showdown(self, showdown_state: pk.ShowdownState) -> None:
+        amount_won = self.analyze_amount_won(showdown_state)
+        
     def call(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         current_player = game_state.current_player
         amount_to_call = game_state.current_bet - current_player.current_bet
@@ -34,8 +61,20 @@ class BaseAgent:
         """Check if no one has raised."""
         current_player = game_state.current_player
         return game_state.current_bet == current_player.current_bet
+    
+    def dynamically_set_name(self, game_state: pk.PokerGameStateSnapshot) -> None:
+        if self.player_name is None:
+            self.player_name = game_state.current_player.name
+            if pk.DEBUG:
+                print(f"Agent name set to {self.player_name}")
+
+    def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        self.dynamically_set_name(game_state)
 
 class AllInAgent(BaseAgent):
+    def __init__(self):
+        super().__init__()
+
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         """Goes all in on the turn, otherwise checks or calls."""
         current_player = game_state.current_player
@@ -47,7 +86,11 @@ class AllInAgent(BaseAgent):
         return self.check(game_state)
 
 class CallCheckAgent(BaseAgent):
+    def __init__(self):
+        super().__init__()
+
     def act(self, game_state: pk.PokerGameStateSnapshot)-> pk.Action:
+        super().act(game_state)
         """Always calls if there's a bet, otherwise checks."""
         if self.someone_has_raised(game_state):
             # If there's a bet, call it
@@ -57,7 +100,11 @@ class CallCheckAgent(BaseAgent):
             return self.check(game_state)
 
 class FoldAgent(BaseAgent):
+    def __init__(self):
+        super().__init__()
+
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        super().act(game_state)
         """Always folds."""
         if self.someone_has_raised(game_state):
             return self.fold(game_state)
@@ -67,8 +114,10 @@ class DelayedAllinAgent(BaseAgent):
     def __init__(self, delay: int = 1):
         self.delay = delay
         self.current_delay = 0
+        super().__init__()
 
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        super().act(game_state)
         """Delays going all in by a specified number of rounds."""
         if self.current_delay < self.delay:
             self.current_delay += 1
@@ -81,11 +130,13 @@ class DelayedAllinAgent(BaseAgent):
 
 class DelayedRaiseAgent(BaseAgent):
     def __init__(self, delay: int = 1, raise_amount: int = 100):
+        super().__init__()
         self.delay = delay
         self.current_delay = 0
         self.raise_amount = raise_amount
 
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        super().act(game_state)
         """Delays raising by a specified number of rounds."""
 
         # if someone raises call. if the delay is not up and no one has raised check
@@ -104,12 +155,14 @@ class DelayedRaiseAgent(BaseAgent):
         
 class ReRaiseAgent(BaseAgent):
     def __init__(self, re_raise_amount: int = 10):
+        super().__init__()
         self.re_raise_amount = re_raise_amount
         self.current_phase = None
         self.did_check = False
 
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
-        # reset for new round
+        super().act(game_state)
+        # reset for new 
 
         if game_state.phase != self.current_phase:
             self.current_phase = game_state.phase
@@ -128,6 +181,7 @@ class ReRaiseAgent(BaseAgent):
 class SmartAgentBase(BaseAgent):
 
     def __init__(self):
+        super().__init__()
         self.rules = pk.PokerRules()
 
     def get_current_players_best_hand(self, game_state: pk.PokerGameStateSnapshot) -> pu.Hand:
@@ -226,7 +280,19 @@ class SmartAgentBase(BaseAgent):
         return isinstance(best_hand, pu.RoyalFlush)
 
 class PairBetterAgent(SmartAgentBase):
+    def __init__(self):
+        super().__init__()
+        self.rl_agent = RLAgent()
+
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        super().act(game_state)
+
+        self.rl_agent.save_vectorized_state(
+            self.rl_agent.vectorize_game_state(game_state),
+            'pair_better.csv',
+            game_state
+            )
+
         """Checks if the player has at least a pair."""
         if self.i_have_at_least_a_pair(game_state):
             if not self.someone_has_raised(game_state):
@@ -239,7 +305,11 @@ class PairBetterAgent(SmartAgentBase):
             return self.check(game_state)
         
 class FlushBetterAgent(SmartAgentBase):
+    def __init__(self):
+        super().__init__()
+
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        super().act(game_state)
         """Checks if the player has at least a flush."""
         if self.i_have_at_least_a_flush(game_state):
             if not self.someone_has_raised(game_state):
@@ -254,37 +324,57 @@ class FlushBetterAgent(SmartAgentBase):
 
 
 class RLAgent(BaseAgent):
+    def __init__(self, filename: str = 'rl_agent.csv'):
+        super().__init__()
+        self.filename = filename
+        self.seen_river = False
+
+    def is_episode_done(self, game_state: pk.PokerGameStateSnapshot) -> bool:
+        """
+        Check if the episode is done.
+        This can be based on the game state or other conditions.
+        """
+        # Assume no reraisiing can occur on the river, and the agent will only be queries once
+        # per round.
+        current_phase = game_state.phase
+        if current_phase == pk.PHASE_RIVER:
+            self.seen_river = True
+
+        if current_phase != pk.PHASE_RIVER and self.seen_river:
+            self.seen_river = False
+            return True
+
+        return False
+
     def vectorize_game_state(self, game_state: pk.PokerGameStateSnapshot) -> np.ndarray:
         """
         Converts the game state into a numerical vector representation.
         """
         # Vectorize the pot size
         pot_size = game_state.pot
-        print('pot_size: ', pot_size)
 
         # Vectorize the current bet
         current_bet = game_state.current_bet
-        print('current_bet: ', current_bet)
 
         # Vectorize the phase of the game
         phase_vector = self._vectorize_phase(game_state.phase)
-        print('phase_vector: ', phase_vector)
 
         # Vectorize the community cards
         community_cards_vector = self._vectorize_cards(game_state.community_cards, community=True)
-        print('community_cards_vector: ', community_cards_vector)
 
         # Vectorize the current player's hand
         current_player_hand_vector = self._vectorize_cards(game_state.current_player.hand)
-        print('current_player_hand_vector: ', current_player_hand_vector)
 
         # Vectorize the current player's stack
         current_player_stack = game_state.current_player.stack
-        print('current_player_stack: ', current_player_stack)
 
         # Vectorize the current player's status
         current_player_status = self._vectorize_status(game_state.current_player.status)
-        print('current_player_status: ', current_player_status)
+
+        if pk.DEBUG:
+            print(f"Pot size: {pot_size}, Current bet: {current_bet}, Phase: {phase_vector}, "
+                  f"Community cards: {community_cards_vector}, Player hand: {current_player_hand_vector}, "
+                  f"Player stack: {current_player_stack}, Player status: {current_player_status}")
 
         # Combine all vectors into a single numpy array
         state_vector = np.concatenate([
@@ -357,7 +447,21 @@ class RLAgent(BaseAgent):
         }
         return statuses.get(status, -1)  # Default to -1 if status is unknown
 
+    def save_vectorized_state(self, state_vector: np.ndarray, game_state: pk.PokerGameStateSnapshot) -> None:
+        """
+        Saves the vectorized state to a csv file. Assume the file exists and you should append to it.
+        """
+        # open the file in append mode
+        with open(self.filename, 'a') as f:
+            # if episode done, write a new line
+            if self.is_episode_done(game_state):
+                f.write('\n')
+            # write phase in new line
+            f.write(f"{game_state.phase}\n")
+            np.savetxt(f, state_vector.reshape(1, -1), delimiter=',', fmt='%d')
+
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
+        super().act(game_state)
         """
         Example action method for RLAgent.
         This method can be extended to use the vectorized state for decision-making.

@@ -1,9 +1,9 @@
 import unittest
 import numpy as np
 from agents import RLAgent
-from poker import Player
+from poker_game import Player
 import poker_util as pu
-import poker as pk
+import poker_game as pk
 
 class TestRLAgentVectorization(unittest.TestCase):
     def setUp(self):
