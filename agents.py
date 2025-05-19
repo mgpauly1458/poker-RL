@@ -7,6 +7,7 @@ class BaseAgent:
 
     def __init__(self):
         self.player_name = None # allows agents to dynamically set their name when current player is set. so they can query if they won at the end of the hand or not.
+        self.replay_buffer = {}
 
     def analyze_amount_won(self, showdown_state: pk.ShowdownState) -> None:
         # check if player is in winners list
@@ -29,11 +30,27 @@ class BaseAgent:
         return 0
 
     def analyze_showdown(self, showdown_state: pk.ShowdownState) -> None:
-        amount_won = self.analyze_amount_won(showdown_state)
+        pass
         
+    def vectorize_action(self, action: pk.Action) -> np.ndarray:
+        # converts action type to a number
+        action_type_mapping = {
+            pk.PLAYER_ACTION_CALL: 0,
+            pk.PLAYER_ACTION_CHECK: 1,
+            pk.PLAYER_ACTION_FOLD: 2,
+            pk.PLAYER_ACTION_RAISE: 3,
+            pk.PLAYER_ACTION_ALL_IN: 4
+        }
+        action_type = action_type_mapping.get(action.type, -1)
+        if action_type == -1:
+            raise ValueError(f"Unknown action type: {action.type}")
+        
+        return 
+
     def call(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         current_player = game_state.current_player
         amount_to_call = game_state.current_bet - current_player.current_bet
+
         return pk.Action(current_player, type=pk.PLAYER_ACTION_CALL, amount=amount_to_call)
     
     def fold(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
@@ -282,16 +299,9 @@ class SmartAgentBase(BaseAgent):
 class PairBetterAgent(SmartAgentBase):
     def __init__(self):
         super().__init__()
-        self.rl_agent = RLAgent()
 
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
         super().act(game_state)
-
-        self.rl_agent.save_vectorized_state(
-            self.rl_agent.vectorize_game_state(game_state),
-            'pair_better.csv',
-            game_state
-            )
 
         """Checks if the player has at least a pair."""
         if self.i_have_at_least_a_pair(game_state):
@@ -328,6 +338,10 @@ class RLAgent(BaseAgent):
         super().__init__()
         self.filename = filename
         self.seen_river = False
+        self.replay_buffer = {}
+        
+        # Temporary use pair better strategy for testing
+        self.pair_better_agent = PairBetterAgent()
 
     def is_episode_done(self, game_state: pk.PokerGameStateSnapshot) -> bool:
         """
@@ -461,7 +475,7 @@ class RLAgent(BaseAgent):
             np.savetxt(f, state_vector.reshape(1, -1), delimiter=',', fmt='%d')
 
     def act(self, game_state: pk.PokerGameStateSnapshot) -> pk.Action:
-        super().act(game_state)
+        self.pair_better_agent.act(game_state)
         """
         Example action method for RLAgent.
         This method can be extended to use the vectorized state for decision-making.

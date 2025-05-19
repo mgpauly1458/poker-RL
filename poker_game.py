@@ -2,7 +2,7 @@ from poker_util import (
     Card, Deck, PokerRules, WorstPokerHand
 )
 
-DEBUG = False
+DEBUG = True
 
 PHASE_PRE_FLOP = 'pre-flop'
 PHASE_FLOP = 'flop'
